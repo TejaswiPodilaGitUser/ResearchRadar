@@ -1,7 +1,24 @@
 from fastapi import FastAPI
 
-app = FastAPI()
+from app.api.papers import router as papers_router
+
+
+app = FastAPI(
+    title="Research Radar API",
+    version="1.0.0"
+)
+
+
+app.include_router(
+    papers_router
+)
+
+
 
 @app.get("/")
-def root():
-    return {"message": "Research Radar API is running"}
+def health_check():
+
+    return {
+        "status": "UP",
+        "service": "Research Radar"
+    }
