@@ -1,61 +1,105 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 from typing import Optional
+
+from fastapi import (
+    APIRouter,
+    Depends,
+    Path,
+    Query,
+)
+
+from sqlalchemy.orm import Session
+
+from app.core.config import settings
+from app.core.exceptions import (
+    ResourceNotFoundException,
+)
 
 from app.database.database import get_db
 
-from app.services.paper_service import (
-    search_papers,
-    get_paper_by_id
-)
-
 from app.schemas.paper_schema import (
     PaginatedPaperResponse,
-    PaperDetailResponse
+    PaperDetailResponse,
 )
 
+from app.services.paper_service import (
+    search_papers,
+    get_paper_by_id,
+)
+
+
+# ============================================================
+# Router
+# ============================================================
 
 router = APIRouter(
     prefix="/papers",
-    tags=["Papers"]
+    tags=["Papers"],
 )
 
 
+# ============================================================
+# GET /papers
+# ============================================================
 
 @router.get(
     "",
-    response_model=PaginatedPaperResponse
+    response_model=PaginatedPaperResponse,
 )
 def get_papers(
+    page: int = Query(
+        default=settings.DEFAULT_PAGE,
+        ge=1,
+        description="Page number",
+    ),
 
-    page: int = 1,
+    size: int = Query(
+        default=settings.DEFAULT_PAGE_SIZE,
+        ge=1,
+        le=settings.MAX_PAGE_SIZE,
+        description="Number of papers per page",
+    ),
 
-    size: int = 20,
+    keyword: Optional[str] = Query(
+        default=None,
+        max_length=settings.MAX_KEYWORD_LENGTH,
+        description=(
+            "Search keyword in paper "
+            "title or abstract"
+        ),
+    ),
 
-    keyword: Optional[str] = None,
+    year: Optional[int] = Query(
+        default=None,
+        ge=settings.MIN_PUBLICATION_YEAR,
+        le=settings.MAX_PUBLICATION_YEAR,
+        description="Publication year",
+    ),
 
-    year: Optional[int] = None,
+    topic: Optional[str] = Query(
+        default=None,
+        max_length=settings.MAX_TOPIC_LENGTH,
+        description="Filter by topic",
+    ),
 
-    topic: Optional[str] = None,
+    author: Optional[str] = Query(
+        default=None,
+        max_length=settings.MAX_AUTHOR_LENGTH,
+        description="Filter by author",
+    ),
 
-    author: Optional[str] = None,
-
-
-    db: Session = Depends(get_db)
-
+    db: Session = Depends(get_db),
 ):
-
     """
-    Search papers
+    Search and filter research papers.
 
     Supports:
-    - pagination
-    - keyword search
-    - year filter
-    - topic filter
-    - author filter
-    """
 
+    - Pagination
+    - Keyword search
+    - Publication year
+    - Topic
+    - Author
+    """
 
     return search_papers(
         db=db,
@@ -64,41 +108,41 @@ def get_papers(
         keyword=keyword,
         year=year,
         topic=topic,
-        author=author
+        author=author,
     )
 
 
-
+# ============================================================
+# GET /papers/{paper_id}
+# ============================================================
 
 @router.get(
     "/{paper_id}",
-    response_model=PaperDetailResponse
+    response_model=PaperDetailResponse,
 )
 def get_paper(
+    paper_id: int = Path(
+        ...,
+        ge=1,
+        description="Database ID of the paper",
+    ),
 
-    paper_id: int,
-
-    db: Session = Depends(get_db)
-
+    db: Session = Depends(get_db),
 ):
-
     """
-    Get paper details
+    Get complete details for a research paper.
     """
-
 
     paper = get_paper_by_id(
-        db,
-        paper_id
+        db=db,
+        paper_id=paper_id,
     )
 
-
-    if not paper:
-
-        raise HTTPException(
-            status_code=404,
-            detail="Paper not found"
+    if paper is None:
+        raise ResourceNotFoundException(
+            resource="Paper",
+            resource_id=paper_id,
         )
 
-
     return paper
+

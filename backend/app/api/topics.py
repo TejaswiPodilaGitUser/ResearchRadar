@@ -1,0 +1,93 @@
+from typing import Optional
+
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+)
+from sqlalchemy.orm import Session
+
+from app.core.config import settings
+from app.database.database import get_db
+
+from app.schemas.topic_schema import (
+    PaginatedTopicResponse,
+    TopicDetailResponse,
+)
+
+from app.services.topic_service import (
+    search_topics,
+    get_topic_by_id,
+)
+
+
+router = APIRouter(
+    prefix="/topics",
+    tags=["Topics"],
+)
+
+
+@router.get(
+    "",
+    response_model=PaginatedTopicResponse,
+)
+def get_topics(
+    page: int = Query(
+        default=settings.DEFAULT_PAGE,
+        ge=1,
+        description="Page number",
+    ),
+
+    size: int = Query(
+        default=settings.DEFAULT_PAGE_SIZE,
+        ge=1,
+        le=settings.MAX_PAGE_SIZE,
+        description="Number of topics per page",
+    ),
+
+    keyword: Optional[str] = Query(
+        default=None,
+        max_length=settings.MAX_TOPIC_LENGTH,
+        description="Search topics by name",
+    ),
+
+    db: Session = Depends(get_db),
+):
+    """
+    Search and paginate topics.
+    """
+
+    return search_topics(
+        db=db,
+        page=page,
+        size=size,
+        keyword=keyword,
+    )
+
+
+@router.get(
+    "/{topic_id}",
+    response_model=TopicDetailResponse,
+)
+def get_topic(
+    topic_id: int,
+    db: Session = Depends(get_db),
+):
+    """
+    Get topic details and associated papers.
+    """
+
+    topic = get_topic_by_id(
+        db=db,
+        topic_id=topic_id,
+    )
+
+    if topic is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Topic with id {topic_id} not found",
+        )
+
+    return topic
+
