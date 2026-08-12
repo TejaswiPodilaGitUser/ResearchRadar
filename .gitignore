@@ -18,3 +18,8 @@ dist/
 
 # Database
 *.sqlite
+
+
+.env.local
+.env.*.local
+.DS_Store

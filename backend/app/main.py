@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -35,6 +36,24 @@ from app.api.recommendations import (
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
+)
+
+
+# ============================================================
+# CORS Middleware
+# ============================================================
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -77,23 +96,28 @@ app.add_exception_handler(
 # ============================================================
 
 app.include_router(
-    papers_router
+    papers_router,
+    prefix="/api",
 )
 
 app.include_router(
-    search_router
+    search_router,
+    prefix="/api",
 )
 
 app.include_router(
-    authors_router
+    authors_router,
+    prefix="/api",
 )
 
 app.include_router(
-    topics_router
+    topics_router,
+    prefix="/api",
 )
 
 app.include_router(
-    recommendations_router
+    recommendations_router,
+    prefix="/api",
 )
 
 

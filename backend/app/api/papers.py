@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Annotated, Optional
 
 from fastapi import (
     APIRouter,
@@ -45,46 +45,33 @@ router = APIRouter(
     response_model=PaginatedPaperResponse,
 )
 def get_papers(
-
-    page: int = Query(
-        default=settings.DEFAULT_PAGE,
+    page: Annotated[int, Query(
         ge=1,
         description="Page number",
-    ),
-
-    size: int = Query(
-        default=settings.DEFAULT_PAGE_SIZE,
+    )] = settings.DEFAULT_PAGE,
+    size: Annotated[int, Query(
         ge=1,
         le=settings.MAX_PAGE_SIZE,
         description="Number of papers per page",
-    ),
-
-    keyword: Optional[str] = Query(
-        default=None,
+    )] = settings.DEFAULT_PAGE_SIZE,
+    keyword: Annotated[Optional[str], Query(
         max_length=settings.MAX_KEYWORD_LENGTH,
         description="Search title or abstract",
-    ),
-
-    year: Optional[int] = Query(
-        default=None,
+    )] = None,
+    year: Annotated[Optional[int], Query(
         ge=settings.MIN_PUBLICATION_YEAR,
         le=settings.MAX_PUBLICATION_YEAR,
         description="Publication year",
-    ),
-
-    topic: Optional[str] = Query(
-        default=None,
+    )] = None,
+    topic: Annotated[Optional[str], Query(
         max_length=settings.MAX_TOPIC_LENGTH,
         description="Filter by topic",
-    ),
-
-    author: Optional[str] = Query(
-        default=None,
+    )] = None,
+    author: Annotated[Optional[str], Query(
         max_length=settings.MAX_AUTHOR_LENGTH,
         description="Filter by author",
-    ),
-
-    db: Session = Depends(get_db),
+    )] = None,
+    db: Annotated[Session, Depends(get_db)] = None,
 ):
     """
     Search and filter research papers.
@@ -111,7 +98,7 @@ def get_papers(
 )
 def get_paper(
     paper_id: int,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)] = None,
 ):
     """
     Get complete paper details.
