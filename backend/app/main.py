@@ -5,7 +5,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.config import settings
-
 from app.core.exceptions import AppException
 
 from app.core.middleware import (
@@ -28,6 +27,10 @@ from app.api.recommendations import (
     router as recommendations_router,
 )
 
+from app.api.metrics import (
+    router as metrics_router,
+)
+
 
 # ============================================================
 # FastAPI Application
@@ -45,12 +48,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:5174",
-    ],
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -120,6 +118,11 @@ app.include_router(
     prefix="/api",
 )
 
+app.include_router(
+    metrics_router,
+    prefix="/api",
+)
+
 
 # ============================================================
 # Health Check
@@ -133,7 +136,6 @@ def health_check():
     """
     Application health check.
     """
-
     return {
         "status": "UP"
     }

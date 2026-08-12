@@ -5,6 +5,7 @@ import {
 
 import SearchPage from "../pages/SearchPage";
 import PaperDetailPage from "../pages/PaperDetailPage";
+import Metrics from "../pages/Metrics";
 
 export const router = createBrowserRouter([
   {
@@ -18,5 +19,9 @@ export const router = createBrowserRouter([
   {
     path: "/papers/:paperId",
     element: <PaperDetailPage />,
+  },
+  {
+    path: "/metrics",
+    element: <Metrics />,
   },
 ]);

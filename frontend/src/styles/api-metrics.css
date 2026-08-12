@@ -1,0 +1,250 @@
+/* ============================================================
+   API Performance Section
+   ============================================================ */
+
+.api-metrics-section {
+  width: 100%;
+  margin-top: 32px;
+}
+
+.api-metrics-header {
+  margin-bottom: 16px;
+}
+
+.api-metrics-header h2 {
+  margin: 0;
+
+  font-size: 20px;
+  line-height: 1.4;
+  font-weight: 700;
+
+  color: #111827;
+}
+
+.api-metrics-header p {
+  margin: 5px 0 0;
+
+  font-size: 14px;
+
+  color: #6b7280;
+}
+
+
+/* ============================================================
+   Metrics Box
+   ============================================================ */
+
+.api-metrics-box {
+  width: 100%;
+  max-width: 760px;
+
+  box-sizing: border-box;
+
+  padding: 8px 24px;
+
+  background: #ffffff;
+
+  border: 1px solid #e5e7eb;
+
+  border-radius: 12px;
+}
+
+
+/* ============================================================
+   Metric Row
+   ============================================================ */
+
+.api-metric-row {
+  display: grid;
+
+  /*
+   * First column = label
+   * Second column = value
+   */
+  grid-template-columns: 180px 1fr;
+
+  /*
+   * Creates clear visual separation
+   */
+  column-gap: 40px;
+
+  align-items: center;
+
+  min-height: 46px;
+
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.api-metric-row:last-child {
+  border-bottom: none;
+}
+
+
+/* ============================================================
+   Metric Label
+   ============================================================ */
+
+.api-metric-row span {
+  font-size: 14px;
+
+  font-weight: 500;
+
+  color: #6b7280;
+
+  white-space: nowrap;
+}
+
+
+/* ============================================================
+   Metric Value
+   ============================================================ */
+
+.api-metric-row strong {
+  font-size: 15px;
+
+  font-weight: 700;
+
+  color: #111827;
+
+  white-space: nowrap;
+}
+
+
+/* ============================================================
+   Latency Section
+   ============================================================ */
+
+.api-latency-section {
+  margin-top: 28px;
+}
+
+.api-latency-section h3 {
+  margin: 0 0 12px;
+
+  font-size: 16px;
+
+  line-height: 1.4;
+
+  font-weight: 600;
+
+  color: #374151;
+}
+
+
+/* ============================================================
+   Loading State
+   ============================================================ */
+
+.api-metrics-state {
+  width: 100%;
+  max-width: 760px;
+
+  box-sizing: border-box;
+
+  padding: 24px;
+
+  text-align: center;
+
+  font-size: 14px;
+
+  color: #6b7280;
+
+  background: #ffffff;
+
+  border: 1px solid #e5e7eb;
+
+  border-radius: 12px;
+}
+
+
+/* ============================================================
+   Error State
+   ============================================================ */
+
+.api-metrics-error {
+  width: 100%;
+  max-width: 760px;
+
+  box-sizing: border-box;
+
+  padding: 16px 20px;
+
+  font-size: 14px;
+
+  color: #b91c1c;
+
+  background: #fef2f2;
+
+  border: 1px solid #fecaca;
+
+  border-radius: 10px;
+}
+
+
+/* ============================================================
+   Tablet
+   ============================================================ */
+
+@media (max-width: 768px) {
+  .api-metrics-box {
+    max-width: 100%;
+  }
+
+  .api-metric-row {
+    grid-template-columns: 160px 1fr;
+
+    column-gap: 28px;
+  }
+}
+
+
+/* ============================================================
+   Mobile
+   ============================================================ */
+
+@media (max-width: 500px) {
+  .api-metrics-box {
+    padding: 8px 18px;
+  }
+
+  .api-metric-row {
+    grid-template-columns: 140px 1fr;
+
+    column-gap: 20px;
+
+    min-height: 44px;
+  }
+
+  .api-metric-row span {
+    font-size: 13px;
+  }
+
+  .api-metric-row strong {
+    font-size: 14px;
+  }
+}
+
+
+/* ============================================================
+   Small Mobile
+   ============================================================ */
+
+@media (max-width: 380px) {
+  .api-metrics-box {
+    padding: 8px 16px;
+  }
+
+  .api-metric-row {
+    grid-template-columns: 1fr;
+
+    row-gap: 2px;
+
+    padding: 9px 0;
+
+    min-height: auto;
+  }
+
+  .api-metric-row strong {
+    padding-left: 0;
+  }
+}

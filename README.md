@@ -1,164 +1,331 @@
+Yes. Your current README is good technically, but it is **behind the actual state of the project**. In particular, it should now mention the React frontend, metrics/API performance monitoring, the actual 299-paper corpus, and the assignment requirements such as Docker, migrations, tests, and the AI feature status.
+
+I would replace it with this cleaner submission-ready version:
+
+````markdown
 # Research Radar
 
-Research Radar is a research-paper discovery platform that allows users to search, filter, explore, and semantically discover research papers using metadata and AI-powered vector search.
+Research Radar is a full-stack research-paper discovery platform built to ingest, search, filter, explore, and semantically discover research papers.
 
-## Features
+The project was developed as a Full Stack / Platform Engineer assignment with a focus on:
 
-* Research paper ingestion from OpenAlex
-* Paper, author, and topic management
-* Pagination and filtering
-* Keyword search
-* Semantic search using embeddings
-* Hybrid search using keyword + semantic similarity
-* PostgreSQL database
-* pgvector for vector similarity search
-* REST APIs using FastAPI
-* Pydantic response validation
-* Centralized configuration
-* Centralized exception handling
-* Request logging/context
-* API input validation and guardrails
-* Health-check endpoint
+- Clean API design
+- Relational data modelling
+- Search and filtering
+- Semantic vector search
+- Frontend usability
+- API observability
+- Error handling
+- Production-oriented engineering practices
 
 ---
 
-## Architecture
+# Features
+
+## Research Discovery
+
+- Search research papers by keyword
+- Search across paper titles and abstracts
+- Filter by publication year
+- Filter by author
+- Filter by topic
+- Paginated paper results
+- Paper detail page
+- Author and topic information
+
+## AI / Semantic Search
+
+- Sentence Transformer embeddings
+- PostgreSQL + pgvector
+- Semantic similarity search
+- Hybrid keyword + semantic search
+- Similarity-based recommendations
+
+## Backend
+
+- FastAPI REST APIs
+- SQLAlchemy ORM
+- Pydantic request/response validation
+- Centralized configuration
+- Centralized exception handling
+- Request ID tracking
+- Request timing
+- API performance metrics
+- Health-check endpoint
+- Input validation and guardrails
+
+## Frontend
+
+- React
+- TypeScript
+- React Router
+- Axios API client
+- Search and filtering UI
+- Paper detail UI
+- Metrics dashboard
+- Loading states
+- Empty states
+- API error states
+- Responsive layout
+
+## Observability
+
+The application tracks API performance metrics including:
+
+- Total requests
+- Average response time
+- Error count
+- Error rate
+- P90 latency
+- P95 latency
+- P99 latency
+
+---
+
+# Architecture
 
 ```text
-                    ┌──────────────────────┐
-                    │      Client/UI       │
-                    └──────────┬───────────┘
-                               │
-                               ▼
-                    ┌──────────────────────┐
-                    │       FastAPI        │
-                    │       REST APIs      │
-                    └──────────┬───────────┘
-                               │
-              ┌────────────────┼────────────────┐
-              │                │                │
-              ▼                ▼                ▼
-        Paper APIs        Search APIs      Recommendation
-              │                │                │
-              └────────────────┼────────────────┘
-                               ▼
-                    ┌──────────────────────┐
-                    │      Services        │
-                    │ Business Logic       │
-                    └──────────┬───────────┘
-                               │
-                  ┌────────────┴────────────┐
-                  │                         │
-                  ▼                         ▼
-          ┌───────────────┐        ┌──────────────────┐
-          │ PostgreSQL    │        │ Embedding Service│
-          │ + pgvector    │        │ Sentence         │
-          │               │        │ Transformers     │
-          └───────────────┘        └────────┬─────────┘
-                                           │
-                                           ▼
-                                      Vector Search
+                         ┌───────────────────────┐
+                         │       React UI        │
+                         │      TypeScript       │
+                         └───────────┬───────────┘
+                                     │
+                                     │ REST / HTTP
+                                     ▼
+                         ┌───────────────────────┐
+                         │       FastAPI         │
+                         │       REST APIs       │
+                         └───────────┬───────────┘
+                                     │
+                    ┌────────────────┼─────────────────┐
+                    │                │                 │
+                    ▼                ▼                 ▼
+              Paper APIs       Search APIs       Metrics APIs
+                    │                │                 │
+                    └────────────────┼─────────────────┘
+                                     │
+                                     ▼
+                         ┌───────────────────────┐
+                         │       Services        │
+                         │    Business Logic     │
+                         └───────────┬───────────┘
+                                     │
+                     ┌───────────────┴───────────────┐
+                     │                               │
+                     ▼                               ▼
+             ┌─────────────────┐           ┌──────────────────┐
+             │   PostgreSQL    │           │    Embedding     │
+             │                 │           │     Service      │
+             │    pgvector     │◄──────────│ Sentence         │
+             │                 │           │ Transformers     │
+             └─────────────────┘           └──────────────────┘
+                     │
+                     ▼
+              Vector Similarity
+                  Search
+````
+
+---
+
+# Technology Stack
+
+| Layer         | Technology            |
+| ------------- | --------------------- |
+| Frontend      | React + TypeScript    |
+| Routing       | React Router          |
+| HTTP Client   | Axios                 |
+| Backend       | Python + FastAPI      |
+| ORM           | SQLAlchemy            |
+| Validation    | Pydantic              |
+| Database      | PostgreSQL            |
+| Vector Search | pgvector              |
+| Embeddings    | Sentence Transformers |
+| Data Source   | OpenAlex              |
+| API Server    | Uvicorn               |
+| Python        | 3.12                  |
+
+---
+
+# Data Source
+
+## OpenAlex
+
+The project uses the OpenAlex API as the research-paper data source.
+
+OpenAlex was selected because:
+
+* It is free to use
+* No API key is required for basic usage
+* It provides structured scholarly metadata
+* It provides paper, author, topic, publication, and citation information
+* It is suitable for reproducible ingestion
+
+The ingestion pipeline retrieves papers for two research areas:
+
+```text
+Artificial Intelligence
+Natural Language Processing
+```
+
+The ingestion process is designed to be:
+
+* Re-runnable
+* Idempotent
+* Duplicate-aware
+* Database-backed
+
+Raw OpenAlex data dumps are not committed to the repository.
+
+---
+
+# Database Model
+
+The core database entities are:
+
+```text
+                    ┌─────────────┐
+                    │    Paper    │
+                    └──────┬──────┘
+                           │
+                ┌──────────┴──────────┐
+                │                     │
+                ▼                     ▼
+        ┌───────────────┐     ┌───────────────┐
+        │    Authors    │     │    Topics     │
+        └───────────────┘     └───────────────┘
+```
+
+Relationships:
+
+```text
+Paper ←→ Author
+Paper ←→ Topic
+```
+
+Many-to-many relationships are represented using association tables.
+
+Core entities include:
+
+* Papers
+* Authors
+* Topics
+* Paper Authors
+* Paper Topics
+
+Paper records also contain embeddings used by semantic search.
+
+---
+
+# Project Structure
+
+```text
+ResearchRadar/
+│
+├── backend/
+│   │
+│   ├── app/
+│   │   │
+│   │   ├── api/
+│   │   │   ├── papers.py
+│   │   │   ├── search.py
+│   │   │   ├── authors.py
+│   │   │   ├── topics.py
+│   │   │   ├── recommendations.py
+│   │   │   └── metrics.py
+│   │   │
+│   │   ├── ai/
+│   │   │   └── embedding_service.py
+│   │   │
+│   │   ├── core/
+│   │   │   ├── config.py
+│   │   │   ├── exceptions.py
+│   │   │   ├── exception_handlers.py
+│   │   │   ├── middleware.py
+│   │   │   └── api_metrics.py
+│   │   │
+│   │   ├── database/
+│   │   │   └── database.py
+│   │   │
+│   │   ├── models/
+│   │   │   ├── paper.py
+│   │   │   ├── author.py
+│   │   │   └── topic.py
+│   │   │
+│   │   ├── schemas/
+│   │   │   └── paper_schema.py
+│   │   │
+│   │   ├── services/
+│   │   │   ├── paper_service.py
+│   │   │   └── search_service.py
+│   │   │
+│   │   └── main.py
+│   │
+│   ├── scripts/
+│   │   ├── openalex_loader.py
+│   │   └── update_embeddings.py
+│   │
+│   ├── requirements.txt
+│   └── .env
+│
+├── frontend/
+│   │
+│   ├── src/
+│   │   │
+│   │   ├── api/
+│   │   │   ├── axiosClient.ts
+│   │   │   ├── papers.ts
+│   │   │   ├── metrics.ts
+│   │   │   └── apiMetrics.ts
+│   │   │
+│   │   ├── components/
+│   │   │   ├── MetricsCards.tsx
+│   │   │   └── ApiMetrics.tsx
+│   │   │
+│   │   ├── pages/
+│   │   │   ├── SearchPage.tsx
+│   │   │   ├── PaperDetailPage.tsx
+│   │   │   └── Metrics.tsx
+│   │   │
+│   │   ├── styles/
+│   │   │   ├── metrics.css
+│   │   │   └── api-metrics.css
+│   │   │
+│   │   ├── app/
+│   │   │   └── router.tsx
+│   │   │
+│   │   ├── App.tsx
+│   │   └── main.tsx
+│   │
+│   └── package.json
+│
+├── README.md
+└── docker-compose.yml
 ```
 
 ---
 
-## Technology Stack
+# Backend APIs
 
-* **Backend:** Python, FastAPI
-* **ORM:** SQLAlchemy
-* **Database:** PostgreSQL
-* **Vector Database:** pgvector
-* **Embeddings:** Sentence Transformers
-* **Validation:** Pydantic
-* **API Server:** Uvicorn
-* **Data Source:** OpenAlex
-* **Python:** 3.12
-
----
-
-## Project Structure
-
-```text
-backend/
-│
-├── app/
-│   ├── api/
-│   │   ├── papers.py
-│   │   ├── search.py
-│   │   ├── authors.py
-│   │   ├── topics.py
-│   │   └── recommendations.py
-│   │
-│   ├── ai/
-│   │   └── embedding_service.py
-│   │
-│   ├── core/
-│   │   ├── config.py
-│   │   ├── exceptions.py
-│   │   ├── exception_handlers.py
-│   │   └── middleware.py
-│   │
-│   ├── database/
-│   │   └── database.py
-│   │
-│   ├── models/
-│   │   ├── paper.py
-│   │   ├── author.py
-│   │   └── topic.py
-│   │
-│   ├── schemas/
-│   │   └── paper_schema.py
-│   │
-│   ├── services/
-│   │   ├── paper_service.py
-│   │   └── search_service.py
-│   │
-│   └── main.py
-│
-├── scripts/
-│   ├── update_embeddings.py
-│   └── ...
-│
-├── .env
-├── requirements.txt
-└── README.md
-```
-
-### Main Components
-
-| Component                    | Responsibility                                    |
-| ---------------------------- | ------------------------------------------------- |
-| `api/`                       | REST API endpoints                                |
-| `services/`                  | Business logic and database operations            |
-| `models/`                    | SQLAlchemy database models                        |
-| `schemas/`                   | Pydantic API request/response models              |
-| `ai/`                        | Embedding generation and AI-related functionality |
-| `database/`                  | Database connection and session management        |
-| `core/config.py`             | Application configuration                         |
-| `core/exceptions.py`         | Custom application exceptions                     |
-| `core/exception_handlers.py` | Centralized error responses                       |
-| `core/middleware.py`         | Request context/logging                           |
-| `scripts/`                   | Data and maintenance scripts                      |
-| `main.py`                    | FastAPI application entry point                   |
-
----
-
-## Current APIs
-
-### Health
+## Health
 
 ```http
 GET /health
 ```
 
-Returns application health status.
+Example response:
+
+```json
+{
+  "status": "UP"
+}
+```
 
 ---
 
-### Papers
+## Papers
 
 ```http
-GET /papers
+GET /api/papers
 ```
 
 Supports:
@@ -172,118 +339,233 @@ Supports:
 Example:
 
 ```http
-GET /papers?page=1&size=20
+GET /api/papers?page=1&size=20
 ```
 
 ```http
-GET /papers?keyword=artificial%20intelligence
+GET /api/papers?keyword=artificial%20intelligence
 ```
 
 ```http
-GET /papers?year=2024
+GET /api/papers?year=2024
 ```
 
 ```http
-GET /papers?topic=machine%20learning
+GET /api/papers?topic=natural%20language%20processing
 ```
 
 ---
 
-### Paper Details
+## Paper Details
 
 ```http
-GET /papers/{paper_id}
+GET /api/papers/{paper_id}
 ```
 
-Returns complete paper information including:
+Returns:
 
 * Title
 * Abstract
-* Publication information
+* Publication date
+* Publication year
 * DOI
 * Authors
 * Topics
+* Citation metadata
+* Other available paper metadata
 
 Example:
 
 ```http
-GET /papers/68
+GET /api/papers/68
 ```
 
 ---
 
-### Semantic Search
+# Semantic Search
 
 ```http
-GET /search
+GET /api/search
 ```
 
-Uses Sentence Transformers to generate an embedding for the query and pgvector to perform cosine-similarity search.
+The search query is converted into an embedding using Sentence Transformers.
+
+The resulting vector is compared against paper embeddings using pgvector.
+
+```text
+User Query
+     │
+     ▼
+Sentence Transformer
+     │
+     ▼
+Query Embedding
+     │
+     ▼
+pgvector
+     │
+     ▼
+Cosine Similarity
+     │
+     ▼
+Relevant Papers
+```
 
 Example:
 
 ```http
-GET /search?q=artificial%20intelligence
+GET /api/search?q=machine%20learning
 ```
 
 ---
 
-### Hybrid Search
+# Hybrid Search
 
 ```http
-GET /search/hybrid
+GET /api/search/hybrid
 ```
 
-Combines:
+Hybrid search combines:
 
-* Keyword matching
-* Semantic vector similarity
+```text
+Keyword relevance
+        +
+Semantic similarity
+        ↓
+Combined ranking
+```
+
+This provides better results for cases where an exact keyword match and semantic relevance need to be considered together.
 
 Example:
 
 ```http
-GET /search/hybrid?q=machine%20learning
+GET /api/search/hybrid?q=machine%20learning
 ```
 
 ---
 
-### Authors
+# Recommendations
 
 ```http
-GET /authors
-GET /authors/{author_id}
+GET /api/recommendations
+```
+
+The recommendation functionality uses the available paper metadata and semantic representation to identify relevant research papers.
+
+The recommendation endpoint is designed to support similarity-based research discovery.
+
+---
+
+# Authors
+
+```http
+GET /api/authors
+```
+
+```http
+GET /api/authors/{author_id}
 ```
 
 Provides author listing and author details.
 
 ---
 
-### Topics
+# Topics
 
 ```http
-GET /topics
-GET /topics/{topic_id}
+GET /api/topics
+```
+
+```http
+GET /api/topics/{topic_id}
 ```
 
 Provides topic listing and topic details.
 
 ---
 
-### Recommendations
+# Metrics
+
+Research corpus metrics:
 
 ```http
-GET /recommendations
+GET /api/metrics
 ```
 
-Provides research-paper recommendations based on the implemented recommendation logic.
+Example:
+
+```json
+{
+  "papers": 299,
+  "authors": 1720,
+  "topics": 741,
+  "year_range": {
+    "from": 2023,
+    "to": 2025
+  }
+}
+```
+
+The frontend exposes these metrics through the Research Radar Metrics page.
 
 ---
 
-## Error Handling
+# API Performance Metrics
+
+```http
+GET /api/metrics/performance
+```
+
+The application records API performance using request middleware.
+
+Tracked metrics include:
+
+```text
+Requests
+Average Response Time
+Errors
+Error Rate
+
+P90 Latency
+P95 Latency
+P99 Latency
+```
+
+Example:
+
+```json
+{
+  "requests": 22,
+  "avg_response_ms": 56.68,
+  "p90_latency_ms": 148.23,
+  "p95_latency_ms": 297.01,
+  "p99_latency_ms": 611.63,
+  "errors": 0,
+  "error_rate": 0.0
+}
+```
+
+### Important limitation
+
+The current implementation uses an in-memory metrics collector with a bounded sample window.
+
+This is intentionally lightweight for the assignment.
+
+For a production deployment, these metrics could be exported to:
+
+* Prometheus
+* Grafana
+* CloudWatch
+* OpenTelemetry
+
+---
+
+# Error Handling
 
 The application uses centralized exception handling.
 
-Common HTTP responses include:
+Common responses include:
 
 | Status | Meaning                      |
 | ------ | ---------------------------- |
@@ -295,7 +577,9 @@ Common HTTP responses include:
 | `500`  | Internal server error        |
 | `503`  | Service/database unavailable |
 
-Application-specific errors use structured responses such as:
+Application errors use structured responses.
+
+Example:
 
 ```json
 {
@@ -308,212 +592,286 @@ Application-specific errors use structured responses such as:
 
 ---
 
-## Configuration
+# Request Tracking
+
+Each HTTP request receives a request ID.
+
+```text
+Client
+  │
+  │ X-Request-ID
+  ▼
+FastAPI Middleware
+  │
+  ├── Request ID
+  ├── Start Time
+  ├── Request Processing
+  └── Response Time
+          │
+          ▼
+       Response
+```
+
+The request ID is returned through:
+
+```text
+X-Request-ID
+```
+
+This makes request tracing and troubleshooting easier.
+
+---
+
+# Configuration
 
 Application configuration is centralized in:
 
 ```text
-app/core/config.py
+backend/app/core/config.py
 ```
 
-Environment-specific values should be stored in `.env`.
+Environment-specific values are provided through `.env`.
 
-Typical configuration includes:
+Example:
 
 ```text
-DATABASE_URL
-APP_NAME
-APP_VERSION
+DATABASE_URL=postgresql://localhost:5432/research_radar
 
-DEFAULT_PAGE
-DEFAULT_PAGE_SIZE
-MAX_PAGE_SIZE
+OPENALEX_BASE_URL=https://api.openalex.org
 
-MAX_KEYWORD_LENGTH
-MAX_TOPIC_LENGTH
-MAX_AUTHOR_LENGTH
-
-MIN_PUBLICATION_YEAR
-MAX_PUBLICATION_YEAR
-
-EMBEDDING_MODEL_NAME
-EMBEDDING_DIMENSION
-
-DEFAULT_SEARCH_LIMIT
-MAX_SEARCH_RESULTS
-MIN_SEARCH_QUERY_LENGTH
-MAX_SEARCH_QUERY_LENGTH
+EMBEDDING_MODEL_NAME=all-MiniLM-L6-v2
+EMBEDDING_DIMENSION=384
 ```
+
+Pagination and validation limits are also configurable.
 
 Secrets and environment-specific configuration should not be committed to Git.
 
 ---
 
-## Embeddings
+# Embeddings
 
-Research papers use vector embeddings for semantic search.
+The current embedding model is:
 
-Current flow:
+```text
+all-MiniLM-L6-v2
+```
+
+with:
+
+```text
+Dimension: 384
+```
+
+Embedding flow:
 
 ```text
 Paper
   │
   ▼
-Text
+Title + Abstract
   │
   ▼
 Sentence Transformer
   │
   ▼
-Embedding Vector
+384-dimensional vector
   │
   ▼
 PostgreSQL + pgvector
 ```
 
-The query follows the same process:
+The same embedding model is used for query embeddings to ensure vector compatibility.
+
+---
+
+# Data Ingestion
+
+The OpenAlex ingestion process:
 
 ```text
-User Query
-    │
-    ▼
-Sentence Transformer
-    │
-    ▼
-Query Embedding
-    │
-    ▼
-pgvector Cosine Similarity
-    │
-    ▼
-Relevant Papers
+OpenAlex API
+     │
+     ▼
+Fetch Papers
+     │
+     ▼
+Validate / Normalize
+     │
+     ▼
+Create / Update Authors
+     │
+     ▼
+Create / Update Topics
+     │
+     ▼
+Create / Update Papers
+     │
+     ▼
+PostgreSQL
 ```
 
-The embedding dimension must match the `pgvector` column definition.
+The ingestion process is designed to be idempotent.
+
+Running the ingestion process multiple times should not create duplicate paper, author, or topic records.
 
 ---
 
-## Database
+# Current Dataset
 
-The application uses PostgreSQL with pgvector.
-
-Core entities:
+The current local dataset contains approximately:
 
 ```text
-Paper
- ├── Authors
- └── Topics
+Papers       299
+Authors    1,720
+Topics       741
 ```
 
-A paper can have multiple authors and multiple topics.
-
-The database currently contains research-paper data imported from OpenAlex.
-
----
-
-## Completed
-
-### Backend
-
-* [x] FastAPI application
-* [x] PostgreSQL integration
-* [x] SQLAlchemy models
-* [x] Paper model
-* [x] Author model
-* [x] Topic model
-* [x] Pydantic schemas
-* [x] Paper listing API
-* [x] Paper details API
-* [x] Author APIs
-* [x] Topic APIs
-* [x] Semantic search API
-* [x] Hybrid search API
-* [x] Recommendation API
-* [x] Pagination
-* [x] Filtering
-* [x] Input validation
-* [x] Configuration management
-* [x] Centralized exception handling
-* [x] Request middleware
-* [x] Error codes
-* [x] Embedding generation
-* [x] pgvector integration
-* [x] Embedding update script
-
----
-
-## Current Status
-
-The backend REST API and semantic-search foundation are implemented.
-
-The database contains imported research papers and the embedding pipeline is available.
-
-The next phase is focused on improving search/recommendation quality and completing the user-facing research discovery experience.
-
----
-
-## Next Steps
-
-### 1. Search Improvements
-
-* Improve hybrid-search ranking
-* Add configurable semantic/keyword weights
-* Add search relevance scoring
-* Improve filtering and sorting
-
-### 2. Recommendations
-
-* Implement similarity-based recommendations
-* Recommend papers related to a selected paper
-* Add configurable recommendation limits
-* Add recommendation ranking
-
-### 3. Data Pipeline
-
-* Improve OpenAlex ingestion
-* Add incremental synchronization
-* Handle duplicate papers
-* Handle updated papers
-* Add ingestion validation
-
-### 4. Frontend
-
-Build the research discovery UI:
+Publication range:
 
 ```text
-Search
-  ↓
-Filters
-  ↓
-Paper Results
-  ↓
-Paper Details
-  ↓
-Related Papers
-  ↓
-Recommendations
+2023 – 2025
 ```
 
-### 5. Production Readiness
-
-* Dockerization
-* Database migrations
-* Automated tests
-* API integration tests
-* CI/CD
-* Structured logging
-* Metrics
-* Distributed tracing
-* Rate limiting
-* Security hardening
+The exact count can change depending on the OpenAlex data returned during ingestion.
 
 ---
 
-## Running the Backend
+# Frontend
 
-Activate the virtual environment:
+The frontend is implemented using:
+
+```text
+React
+TypeScript
+React Router
+Axios
+CSS
+```
+
+Main routes:
+
+```text
+/search
+/papers/:paperId
+/metrics
+```
+
+## Search Page
+
+Provides:
+
+* Search box
+* Keyword search
+* Filters
+* Pagination
+* Loading state
+* Empty state
+* Error state
+
+---
+
+## Paper Detail Page
+
+Displays:
+
+* Paper title
+* Abstract
+* Authors
+* Publication year
+* Topics
+* DOI / metadata
+* Research discovery functionality
+
+---
+
+## Metrics Page
+
+Provides two categories of metrics.
+
+### Research Corpus
+
+```text
+Papers
+Authors
+Topics
+Publication Range
+```
+
+### API Performance
+
+```text
+Requests
+Average Response
+Errors
+Error Rate
+
+P90
+P95
+P99
+```
+
+---
+
+# Database
+
+PostgreSQL is used as the primary relational database.
+
+pgvector is used for vector similarity search.
+
+Core data model:
+
+```text
+papers
+authors
+topics
+paper_authors
+paper_topics
+```
+
+The paper embedding is stored alongside paper metadata.
+
+---
+
+# Database Migrations
+
+Database schema changes should be managed using Alembic migrations.
+
+Example:
 
 ```bash
+alembic upgrade head
+```
+
+New schema changes should be introduced through migrations rather than manually creating database tables.
+
+---
+
+# Running Locally
+
+## Prerequisites
+
+Install:
+
+* Python 3.12+
+* Node.js
+* PostgreSQL
+* pgvector
+
+---
+
+## Backend
+
+Navigate to the backend:
+
+```bash
+cd backend
+```
+
+Create and activate a virtual environment:
+
+```bash
+python -m venv venv
 source venv/bin/activate
 ```
 
@@ -523,25 +881,40 @@ Install dependencies:
 pip install -r requirements.txt
 ```
 
-Start the API:
+Configure `.env`:
+
+```text
+DATABASE_URL=postgresql://localhost:5432/research_radar
+OPENALEX_BASE_URL=https://api.openalex.org
+EMBEDDING_MODEL_NAME=all-MiniLM-L6-v2
+EMBEDDING_DIMENSION=384
+```
+
+Run migrations:
+
+```bash
+alembic upgrade head
+```
+
+Start FastAPI:
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-The API will be available at:
+Backend:
 
 ```text
 http://127.0.0.1:8000
 ```
 
-Swagger UI:
+Swagger:
 
 ```text
 http://127.0.0.1:8000/docs
 ```
 
-OpenAPI specification:
+OpenAPI:
 
 ```text
 http://127.0.0.1:8000/openapi.json
@@ -549,9 +922,21 @@ http://127.0.0.1:8000/openapi.json
 
 ---
 
-## Embedding Update
+# Data Ingestion
 
-To generate/update embeddings:
+Run the OpenAlex ingestion script:
+
+```bash
+python -m app.ingestion.openalex_loader
+```
+
+The ingestion process can be safely re-run.
+
+---
+
+# Generate Embeddings
+
+Run:
 
 ```bash
 python -m scripts.update_embeddings
@@ -561,50 +946,370 @@ The script identifies papers without embeddings and generates vectors using the 
 
 ---
 
-## API Documentation
+# Frontend
 
-Interactive API documentation is automatically provided by FastAPI through Swagger UI.
+Navigate to the frontend:
 
-Use:
-
-```text
-/docs
+```bash
+cd frontend
 ```
 
-for API testing and exploration.
+Install dependencies:
+
+```bash
+npm install
+```
+
+Start the development server:
+
+```bash
+npm run dev
+```
+
+The frontend will normally be available at:
+
+```text
+http://localhost:5173
+```
 
 ---
 
-## Development Principles
+# Docker
 
-The backend follows a layered architecture:
+The target development experience is:
 
-```text
-API
- ↓
-Service
- ↓
-Repository/Database
- ↓
-PostgreSQL
+```bash
+docker compose up
 ```
 
-Cross-cutting concerns such as configuration, exception handling, logging, validation, and middleware are kept outside the business logic.
+The complete application should start with:
 
-The implementation also applies practical guardrails for:
+```text
+Frontend
+   │
+   ▼
+FastAPI
+   │
+   ▼
+PostgreSQL + pgvector
+```
 
-* Input validation
+No raw dataset dumps are required in the repository.
+
+---
+
+# Testing
+
+API-level tests are the primary testing focus because the backend contains the main business and data-access logic.
+
+Important test areas include:
+
+* Paper listing
+* Pagination
+* Search
+* Filters
+* Paper detail
+* Not-found handling
+* Validation errors
+* Metrics endpoints
+* Health endpoint
+
+Run tests with:
+
+```bash
+pytest
+```
+
+---
+
+# Engineering Decisions
+
+## Why OpenAlex?
+
+OpenAlex was selected because it provides a free scholarly metadata API without requiring an API key for this assignment.
+
+It also provides useful relationships between papers, authors, topics, citations, and publication metadata.
+
+---
+
+## Why PostgreSQL?
+
+PostgreSQL provides:
+
+* Strong relational modelling
+* Reliable transactions
+* Flexible querying
+* Mature indexing
+* Excellent Python ecosystem support
+
+It also supports pgvector, allowing relational and vector search capabilities to remain within the same database.
+
+---
+
+## Why pgvector?
+
+Using pgvector avoids introducing a separate vector database for a relatively small corpus.
+
+For this assignment, storing:
+
+```text
+Paper metadata
++
+Embedding
+```
+
+in PostgreSQL keeps the architecture simple and easy to operate.
+
+At larger scale, a dedicated vector-search infrastructure could be evaluated.
+
+---
+
+## Why Sentence Transformers?
+
+A local embedding model avoids dependency on a paid external API and makes semantic search reproducible.
+
+The selected model:
+
+```text
+all-MiniLM-L6-v2
+```
+
+provides a good balance between:
+
+* Embedding quality
+* Speed
+* Model size
+* Local execution
+
+---
+
+## Why Hybrid Search?
+
+Keyword search works well for exact terminology.
+
+Semantic search works better when the query and paper use different but related terminology.
+
+Combining both approaches provides a more useful research discovery experience.
+
+---
+
+# Trade-offs
+
+The implementation intentionally prioritizes simplicity because the assignment is time-boxed.
+
+### In-memory API metrics
+
+Current metrics are stored in application memory.
+
+Advantages:
+
+* Simple
+* No additional infrastructure
+* Easy to demonstrate
+
+Limitations:
+
+* Metrics reset when the application restarts
+* Not suitable for multiple backend instances
+* No historical metrics
+
+A production implementation would use Prometheus/OpenTelemetry or a cloud monitoring platform.
+
+### Local embeddings
+
+Advantages:
+
+* No external AI API dependency
+* No API key
+* Predictable cost
+* Reproducible
+
+Trade-off:
+
+* CPU/memory usage
+* Embedding generation can be slower than hosted services
+
+### PostgreSQL + pgvector
+
+Advantages:
+
+* Simple architecture
+* One database
+* Easy local development
+
+Trade-off:
+
+For a very large corpus, a dedicated vector-search solution may provide better scalability.
+
+---
+
+# Security and Guardrails
+
+The application includes practical API guardrails for:
+
+* Request validation
+* Query length
 * Pagination limits
-* Search query length
 * Result limits
-* Error handling
-* Database failures
-* Unexpected exceptions
-* Sensitive configuration
-* API abuse/rate limiting
+* Topic length
+* Author filter length
+* Publication-year validation
+* Structured error handling
+* Database exception handling
+* Sensitive configuration through environment variables
+
+Production deployment would additionally require:
+
+* Authentication / authorization
+* HTTPS
+* Secret management
+* WAF
+* Rate limiting
+* Security headers
+* Audit logging
 
 ---
 
-## License
+# Current Implementation Status
+
+## Backend
+
+* [x] FastAPI application
+* [x] PostgreSQL integration
+* [x] SQLAlchemy models
+* [x] Paper model
+* [x] Author model
+* [x] Topic model
+* [x] Many-to-many relationships
+* [x] Pydantic schemas
+* [x] Paper listing API
+* [x] Paper detail API
+* [x] Author APIs
+* [x] Topic APIs
+* [x] Search API
+* [x] Hybrid search API
+* [x] Recommendation API
+* [x] Pagination
+* [x] Filtering
+* [x] Input validation
+* [x] Configuration management
+* [x] Centralized exception handling
+* [x] Request middleware
+* [x] Request ID
+* [x] Request timing
+* [x] API performance metrics
+* [x] Embedding generation
+* [x] pgvector integration
+* [x] OpenAlex ingestion
+* [x] Idempotent ingestion
+
+## Frontend
+
+* [x] React application
+* [x] TypeScript
+* [x] React Router
+* [x] Axios API client
+* [x] Search page
+* [x] Paper detail page
+* [x] Metrics page
+* [x] Research corpus metrics
+* [x] API performance metrics
+* [x] P90/P95/P99 latency metrics
+* [x] Loading states
+* [x] Error states
+* [x] Empty states
+* [x] Responsive styling
+
+## Remaining / Finalization
+
+* [ ] Finalize AI feature on paper detail page
+* [ ] Verify Alembic migrations
+* [ ] Add/verify API tests
+* [ ] Finalize Docker Compose
+* [ ] Finalize README
+* [ ] Clean Git history
+* [ ] Final end-to-end verification
+* [ ] Optional cloud deployment
+
+---
+
+# Future Improvements
+
+With additional time, the following could be added:
+
+### Search
+
+* Better ranking algorithms
+* Configurable hybrid-search weights
+* Search result relevance scores
+* Advanced filters
+* Citation-based ranking
+
+### AI
+
+* Similar-paper explanations
+* Abstract summarization
+* Research trend detection
+* Topic clustering
+
+### Platform
+
+* Redis caching
+* Authentication
+* Role-based access
+* Prometheus metrics
+* OpenTelemetry tracing
+* CI/CD
+* Automated security scanning
+* Cloud deployment
+
+---
+
+# Project Goals
+
+The primary goal of Research Radar is not to build a large production research platform.
+
+The goal is to demonstrate a practical end-to-end engineering workflow:
+
+```text
+External Data
+     ↓
+Ingestion
+     ↓
+Data Modelling
+     ↓
+PostgreSQL
+     ↓
+REST APIs
+     ↓
+Search / Vector Search
+     ↓
+React UI
+     ↓
+Observability
+```
+
+The implementation intentionally favors a simple architecture that can be understood, run, tested, and extended easily.
+
+---
+
+# License
 
 This project is currently intended for educational and development purposes.
+
+```
+
+### One important change before you commit this
+
+Your README currently says some things are completed that **need to be verified against the actual repository**, especially:
+
+- `Alembic`
+- `Docker Compose`
+- automated tests
+- the final AI feature
+- recommendation implementation
+
+Don't claim those as `[x]` until they actually work from a fresh clone.
+
+For the assignment, I'd also change the final status from **"next phase"** to **"implementation status"**, because your project has progressed considerably beyond the original README.
+```
