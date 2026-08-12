@@ -1,8 +1,13 @@
-from sqlalchemy import Column, BigInteger, String, DateTime
-from sqlalchemy.orm import relationship
-from datetime import datetime
+from sqlalchemy import (
+    BigInteger,
+    Column,
+    String,
+)
 
-from app.database.database import Base
+from sqlalchemy.orm import relationship
+
+from app.database.base import Base
+from app.models.associations.paper_topic import paper_topics
 
 
 class Topic(Base):
@@ -12,25 +17,28 @@ class Topic(Base):
     id = Column(
         BigInteger,
         primary_key=True,
-        index=True
+        index=True,
     )
 
     name = Column(
-        String(255),
-        unique=True,
+        String(500),
         nullable=False,
-        index=True
+        unique=True,
+        index=True,
     )
 
-    created_at = Column(
-        DateTime,
-        default=datetime.utcnow
-    )
-
-
-    # Many-to-many relationship with papers
     papers = relationship(
         "Paper",
-        secondary="paper_topics",
-        back_populates="topics"
+        secondary=paper_topics,
+        back_populates="topics",
+        lazy="selectin",
     )
+
+    def __repr__(self):
+
+        return (
+            f"<Topic("
+            f"id={self.id}, "
+            f"name='{self.name}'"
+            f")>"
+        )

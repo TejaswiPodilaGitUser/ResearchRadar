@@ -1,10 +1,38 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from typing import List
+
+from fastapi import (
+    APIRouter,
+    Depends,
+    Query,
+)
+
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
+from app.core.exceptions import ResourceNotFoundException
 from app.database.database import get_db
-from app.models.paper import Paper
-from app.schemas.paper_schema import PaperListResponse
 
+from app.schemas.recommendation_schema import (
+    RecommendationListResponse,
+    TrendingPaperResponse,
+)
+
+from app.services.recommendation_service import (
+    recommendation_service,
+)
+
+from app.services.topic_recommendation_service import (
+    topic_recommendation_service,
+)
+
+from app.services.author_recommendation_service import (
+    author_recommendation_service,
+)
+
+
+# ============================================================
+# Router
+# ============================================================
 
 router = APIRouter(
     prefix="/api/recommendations",
@@ -12,71 +40,185 @@ router = APIRouter(
 )
 
 
+# ============================================================
+# GET /api/recommendations/trending
+# ============================================================
+
 @router.get(
-    "/{paper_id}",
-    response_model=list[PaperListResponse],
+    "/trending",
+    response_model=List[TrendingPaperResponse],
 )
-def get_recommendations(
-    paper_id: int,
+def get_trending_papers(
     limit: int = Query(
-        default=10,
+        default=settings.RECOMMENDATION_DEFAULT_LIMIT,
         ge=1,
-        le=50,
-        description="Number of recommendations",
+        le=settings.RECOMMENDATION_MAX_LIMIT,
+        description="Number of trending papers",
     ),
     db: Session = Depends(get_db),
 ):
     """
-    Return papers that are semantically similar
-    to the requested paper.
+    Return trending research papers.
+
+    Ranking:
+        1. Citation count
+        2. Publication year
+        3. Paper ID
     """
 
-    # -----------------------------------------
-    # Find source paper
-    # -----------------------------------------
-
-    paper = (
-        db.query(Paper)
-        .filter(
-            Paper.id == paper_id
-        )
-        .first()
+    return recommendation_service.get_trending(
+        db=db,
+        limit=limit,
     )
 
-    if paper is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Paper with id {paper_id} not found",
-        )
 
-    if paper.embedding is None:
-        return []
+# ============================================================
+# GET /api/recommendations/{paper_id}/similar
+# ============================================================
 
-    # -----------------------------------------
-    # Calculate cosine distance
-    # -----------------------------------------
+@router.get(
+    "/{paper_id}/similar",
+    response_model=RecommendationListResponse,
+)
+def get_similar_papers(
+    paper_id: int,
+    limit: int = Query(
+        default=settings.RECOMMENDATION_DEFAULT_LIMIT,
+        ge=1,
+        le=settings.RECOMMENDATION_MAX_LIMIT,
+    ),
+    db: Session = Depends(get_db),
+):
+    """
+    Return semantically similar papers.
+    """
 
-    distance = (
-        Paper.embedding.cosine_distance(
-            paper.embedding
-        )
+    result = recommendation_service.get_similar(
+        db=db,
+        paper_id=paper_id,
+        limit=limit,
     )
 
-    # -----------------------------------------
-    # Find similar papers
-    # -----------------------------------------
+    if result is None:
+        raise ResourceNotFoundException(
+            resource="Paper",
+            resource_id=paper_id,
+        )
 
-    recommendations = (
-        db.query(Paper)
-        .filter(
-            Paper.embedding.is_not(None),
-            Paper.id != paper_id,
-        )
-        .order_by(
-            distance.asc()
-        )
-        .limit(limit)
-        .all()
+    return {
+        "results": result
+    }
+
+
+# ============================================================
+# GET /api/recommendations/{paper_id}/by-topic
+# ============================================================
+
+@router.get(
+    "/{paper_id}/by-topic",
+    response_model=RecommendationListResponse,
+)
+def get_topic_recommendations(
+    paper_id: int,
+    limit: int = Query(
+        default=settings.RECOMMENDATION_DEFAULT_LIMIT,
+        ge=1,
+        le=settings.RECOMMENDATION_MAX_LIMIT,
+    ),
+    db: Session = Depends(get_db),
+):
+    """
+    Return papers sharing topics with the source paper.
+    """
+
+    result = topic_recommendation_service.get_by_topic(
+        db=db,
+        paper_id=paper_id,
+        limit=limit,
     )
 
-    return recommendations
+    if result is None:
+        raise ResourceNotFoundException(
+            resource="Paper",
+            resource_id=paper_id,
+        )
+
+    return {
+        "results": result
+    }
+
+
+# ============================================================
+# GET /api/recommendations/{paper_id}/by-author
+# ============================================================
+
+@router.get(
+    "/{paper_id}/by-author",
+    response_model=RecommendationListResponse,
+)
+def get_author_recommendations(
+    paper_id: int,
+    limit: int = Query(
+        default=settings.RECOMMENDATION_DEFAULT_LIMIT,
+        ge=1,
+        le=settings.RECOMMENDATION_MAX_LIMIT,
+    ),
+    db: Session = Depends(get_db),
+):
+    """
+    Return papers sharing authors with the source paper.
+    """
+
+    result = author_recommendation_service.get_by_author(
+        db=db,
+        paper_id=paper_id,
+        limit=limit,
+    )
+
+    if result is None:
+        raise ResourceNotFoundException(
+            resource="Paper",
+            resource_id=paper_id,
+        )
+
+    return {
+        "results": result
+    }
+
+
+# ============================================================
+# GET /api/recommendations/{paper_id}
+# ============================================================
+
+@router.get(
+    "/{paper_id}",
+    response_model=RecommendationListResponse,
+)
+def get_recommendations(
+    paper_id: int,
+    limit: int = Query(
+        default=settings.RECOMMENDATION_DEFAULT_LIMIT,
+        ge=1,
+        le=settings.RECOMMENDATION_MAX_LIMIT,
+    ),
+    db: Session = Depends(get_db),
+):
+    """
+    Return general recommendations for a paper.
+    """
+
+    result = recommendation_service.get_recommendations(
+        db=db,
+        paper_id=paper_id,
+        limit=limit,
+    )
+
+    if result is None:
+        raise ResourceNotFoundException(
+            resource="Paper",
+            resource_id=paper_id,
+        )
+
+    return {
+        "results": result
+    }

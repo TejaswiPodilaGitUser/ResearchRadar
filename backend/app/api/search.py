@@ -1,25 +1,15 @@
 from typing import List
 
-from fastapi import (
-    APIRouter,
-    Depends,
-    Query,
-)
-
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.exceptions import BadRequestException
-
 from app.database.database import get_db
 
-from app.schemas.paper_schema import (
-    PaperListResponse,
-)
+from app.schemas.paper_schema import PaperListResponse
 
-from app.services.search_service import (
-    search_service,
-)
+from app.services.search_service import search_service
 
 
 # ============================================================
@@ -33,6 +23,7 @@ router = APIRouter(
 
 
 # ============================================================
+# GET /search
 # Semantic Search
 # ============================================================
 
@@ -59,6 +50,9 @@ def search_papers(
 ):
     """
     Perform semantic search across research papers.
+
+    Example:
+        GET /search?q=artificial%20intelligence&limit=10
     """
 
     query = q.strip()
@@ -72,16 +66,15 @@ def search_papers(
             },
         )
 
-    results = search_service.search(
+    return search_service.search(
         db=db,
         query=query,
         limit=limit,
     )
 
-    return results
-
 
 # ============================================================
+# GET /search/hybrid
 # Hybrid Search
 # ============================================================
 
@@ -111,6 +104,9 @@ def hybrid_search_papers(
 
         - Keyword matching
         - Semantic vector similarity
+
+    Example:
+        GET /search/hybrid?q=machine%20learning&limit=10
     """
 
     query = q.strip()
@@ -124,11 +120,8 @@ def hybrid_search_papers(
             },
         )
 
-    results = search_service.hybrid_search(
+    return search_service.hybrid_search(
         db=db,
         query=query,
         limit=limit,
     )
-
-    return results
-

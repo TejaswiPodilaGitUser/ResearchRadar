@@ -4,28 +4,30 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.ai.embedding_service import embedding_service
+from app.core.config import settings
 from app.models.paper import Paper
 
 
 class SearchService:
     """
-    Service responsible for searching research papers.
+    Service responsible for research paper search.
 
     Supports:
-        1. Semantic vector search using pgvector
-        2. Basic hybrid search using keyword + vector similarity
+
+        1. Semantic search
+        2. Hybrid search
     """
 
-    MIN_QUERY_LENGTH = 2
-    DEFAULT_LIMIT = 10
-    MAX_LIMIT = 100
+    # ========================================================
+    # Validate Query
+    # ========================================================
 
+    @staticmethod
     def _validate_query(
-        self,
         query: str,
     ) -> str:
         """
-        Validate and normalize search query.
+        Clean and validate search query.
         """
 
         if not query:
@@ -33,33 +35,93 @@ class SearchService:
 
         query = query.strip()
 
-        if len(query) < self.MIN_QUERY_LENGTH:
+        if len(query) < settings.MIN_SEARCH_QUERY_LENGTH:
+            return ""
+
+        if len(query) > settings.MAX_SEARCH_QUERY_LENGTH:
             return ""
 
         return query
 
+    # ========================================================
+    # Normalize Limit
+    # ========================================================
+
+    @staticmethod
     def _normalize_limit(
-        self,
-        limit: int,
+        limit: int | None,
     ) -> int:
         """
-        Keep result limit within safe bounds.
+        Keep result limit within configured boundaries.
         """
+
+        if limit is None:
+            return settings.DEFAULT_SEARCH_LIMIT
 
         return max(
             1,
             min(
                 limit,
-                self.MAX_LIMIT,
+                settings.MAX_SEARCH_RESULTS,
             ),
         )
+
+    # ========================================================
+    # Convert Paper
+    # ========================================================
+
+    @staticmethod
+    def _paper_to_response(
+        paper: Paper,
+    ) -> dict:
+        """
+        Convert SQLAlchemy Paper model
+        into API response structure.
+        """
+
+        return {
+            "paper_id": paper.id,
+            "paper_name": paper.title,
+            "publication_year": paper.publication_year,
+            "cited_by_count": paper.cited_by_count,
+        }
+
+    # ========================================================
+    # Generate Query Embedding
+    # ========================================================
+
+    @staticmethod
+    def _generate_embedding(
+        query: str,
+    ):
+        """
+        Generate embedding for search query.
+        """
+
+        embedding = (
+            embedding_service.generate_embedding(
+                query
+            )
+        )
+
+        if embedding is None:
+            return None
+
+        if len(embedding) != settings.EMBEDDING_DIMENSION:
+            return None
+
+        return embedding
+
+    # ========================================================
+    # Semantic Search
+    # ========================================================
 
     def search(
         self,
         db: Session,
         query: str,
-        limit: int = DEFAULT_LIMIT,
-    ) -> List[Paper]:
+        limit: int | None = None,
+    ) -> List[dict]:
         """
         Perform semantic vector search.
 
@@ -69,47 +131,42 @@ class SearchService:
               ↓
             Embedding
               ↓
-            pgvector cosine similarity
+            pgvector
               ↓
-            PostgreSQL
+            Cosine similarity
               ↓
             Ranked papers
         """
 
-        # -----------------------------
+        # ----------------------------------------------------
         # Validate query
-        # -----------------------------
+        # ----------------------------------------------------
 
         query = self._validate_query(query)
 
         if not query:
             return []
 
-        # -----------------------------
-        # Normalize limit
-        # -----------------------------
+        # ----------------------------------------------------
+        # Validate limit
+        # ----------------------------------------------------
 
         limit = self._normalize_limit(limit)
 
-        # -----------------------------
-        # Generate query embedding
-        # -----------------------------
+        # ----------------------------------------------------
+        # Generate embedding
+        # ----------------------------------------------------
 
         query_embedding = (
-            embedding_service.generate_embedding(
-                query
-            )
+            self._generate_embedding(query)
         )
 
-        if not query_embedding:
+        if query_embedding is None:
             return []
 
-        # -----------------------------
+        # ----------------------------------------------------
         # Calculate cosine distance
-        #
-        # pgvector:
-        # lower distance = more similar
-        # -----------------------------
+        # ----------------------------------------------------
 
         cosine_distance = (
             Paper.embedding.cosine_distance(
@@ -117,11 +174,11 @@ class SearchService:
             )
         )
 
-        # -----------------------------
-        # Execute semantic search
-        # -----------------------------
+        # ----------------------------------------------------
+        # Execute query
+        # ----------------------------------------------------
 
-        return (
+        papers = (
             db.query(Paper)
             .filter(
                 Paper.embedding.is_not(None)
@@ -133,56 +190,64 @@ class SearchService:
             .all()
         )
 
+        # ----------------------------------------------------
+        # Convert response
+        # ----------------------------------------------------
+
+        return [
+            self._paper_to_response(paper)
+            for paper in papers
+        ]
+
+    # ========================================================
+    # Hybrid Search
+    # ========================================================
+
     def hybrid_search(
         self,
         db: Session,
         query: str,
-        limit: int = DEFAULT_LIMIT,
-    ) -> List[Paper]:
+        limit: int | None = None,
+    ) -> List[dict]:
         """
-        Perform hybrid paper search.
+        Perform hybrid search.
 
         Combines:
 
             Keyword matching
-                  +
-            Semantic vector similarity
-
-        Exact title/abstract matches are prioritized,
-        followed by semantic similarity.
+                    +
+            Semantic similarity
         """
 
-        # -----------------------------
+        # ----------------------------------------------------
         # Validate query
-        # -----------------------------
+        # ----------------------------------------------------
 
         query = self._validate_query(query)
 
         if not query:
             return []
 
-        # -----------------------------
-        # Normalize limit
-        # -----------------------------
+        # ----------------------------------------------------
+        # Validate limit
+        # ----------------------------------------------------
 
         limit = self._normalize_limit(limit)
 
-        # -----------------------------
-        # Generate query embedding
-        # -----------------------------
+        # ----------------------------------------------------
+        # Generate embedding
+        # ----------------------------------------------------
 
         query_embedding = (
-            embedding_service.generate_embedding(
-                query
-            )
+            self._generate_embedding(query)
         )
 
-        if not query_embedding:
+        if query_embedding is None:
             return []
 
-        # -----------------------------
+        # ----------------------------------------------------
         # Vector similarity
-        # -----------------------------
+        # ----------------------------------------------------
 
         cosine_distance = (
             Paper.embedding.cosine_distance(
@@ -190,28 +255,22 @@ class SearchService:
             )
         )
 
-        # -----------------------------
+        # ----------------------------------------------------
         # Keyword matching
-        # -----------------------------
+        # ----------------------------------------------------
+
+        search_text = f"%{query}%"
 
         keyword_match = or_(
-            Paper.title.ilike(
-                f"%{query}%"
-            ),
-            Paper.abstract.ilike(
-                f"%{query}%"
-            ),
+            Paper.title.ilike(search_text),
+            Paper.abstract.ilike(search_text),
         )
 
-        # -----------------------------
-        # Execute hybrid search
-        #
-        # Priority:
-        #   1. Keyword match
-        #   2. Semantic similarity
-        # -----------------------------
+        # ----------------------------------------------------
+        # Execute hybrid query
+        # ----------------------------------------------------
 
-        return (
+        papers = (
             db.query(Paper)
             .filter(
                 Paper.embedding.is_not(None)
@@ -219,14 +278,24 @@ class SearchService:
             .order_by(
                 keyword_match.desc(),
                 cosine_distance.asc(),
+                Paper.id.desc(),
             )
             .limit(limit)
             .all()
         )
 
+        # ----------------------------------------------------
+        # Convert response
+        # ----------------------------------------------------
 
-# -----------------------------------------
-# Singleton service instance
-# -----------------------------------------
+        return [
+            self._paper_to_response(paper)
+            for paper in papers
+        ]
+
+
+# ============================================================
+# Service Instance
+# ============================================================
 
 search_service = SearchService()

@@ -1,10 +1,45 @@
 from typing import Optional
 
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.models.author import Author
+from app.database.queries.author_queries import (
+    find_authors,
+    find_author_by_id,
+)
+
+
+# ============================================================
+# Author Mapping
+# ============================================================
+
+def _author_to_response(author) -> dict:
+    """
+    Convert Author model to API response.
+    """
+
+    return {
+        "author_id": author.id,
+        "author_name": author.name,
+        "orcid": author.orcid,
+    }
+
+
+# ============================================================
+# Paper Mapping
+# ============================================================
+
+def _paper_to_response(paper) -> dict:
+    """
+    Convert Paper model to API response.
+    """
+
+    return {
+        "paper_id": paper.id,
+        "paper_name": paper.title,
+        "publication_year": paper.publication_year,
+        "cited_by_count": paper.cited_by_count,
+    }
 
 
 # ============================================================
@@ -19,11 +54,11 @@ def search_authors(
 ):
     """
     Search authors with pagination.
-
-    Supports:
-        - Pagination
-        - Author name search
     """
+
+    # --------------------------------------------------------
+    # Pagination defaults
+    # --------------------------------------------------------
 
     page = (
         page
@@ -36,6 +71,10 @@ def search_authors(
         if size is not None
         else settings.DEFAULT_PAGE_SIZE
     )
+
+    # --------------------------------------------------------
+    # Pagination guardrails
+    # --------------------------------------------------------
 
     page = max(
         page,
@@ -50,79 +89,76 @@ def search_authors(
         ),
     )
 
-    query = db.query(Author)
-
-    # --------------------------------------------------------
-    # Name search
-    # --------------------------------------------------------
-
-    if keyword:
-
-        keyword = keyword.strip()
-
-        if keyword:
-            query = query.filter(
-                Author.name.ilike(
-                    f"%{keyword}%"
-                )
-            )
-
-    # --------------------------------------------------------
-    # Count
-    # --------------------------------------------------------
-
-    total = (
-        query
-        .with_entities(
-            func.count(Author.id)
-        )
-        .scalar()
-    ) or 0
-
-    # --------------------------------------------------------
-    # Pagination
-    # --------------------------------------------------------
-
     offset = (
         page - 1
     ) * size
 
-    authors = (
-        query
-        .order_by(
-            Author.name.asc(),
-            Author.id.asc(),
-        )
-        .offset(offset)
-        .limit(size)
-        .all()
+    # --------------------------------------------------------
+    # Database query
+    # --------------------------------------------------------
+
+    total, authors = find_authors(
+        db=db,
+        offset=offset,
+        limit=size,
+        keyword=keyword,
     )
+
+    # --------------------------------------------------------
+    # API response
+    # --------------------------------------------------------
 
     return {
         "page": page,
         "page_size": size,
         "total": total,
-        "results": authors,
+        "results": [
+            _author_to_response(author)
+            for author in authors
+        ],
     }
 
 
 # ============================================================
-# Get Author
+# Get Author By ID
 # ============================================================
 
 def get_author_by_id(
     db: Session,
     author_id: int,
-) -> Optional[Author]:
+) -> Optional[dict]:
     """
     Get author including associated papers.
     """
 
-    return (
-        db.query(Author)
-        .filter(
-            Author.id == author_id
-        )
-        .first()
+    # --------------------------------------------------------
+    # Database query
+    # --------------------------------------------------------
+
+    author = find_author_by_id(
+        db=db,
+        author_id=author_id,
     )
 
+    if author is None:
+        return None
+
+    # --------------------------------------------------------
+    # Convert associated papers
+    # --------------------------------------------------------
+
+    papers = [
+        _paper_to_response(paper)
+        for paper in author.papers
+    ]
+
+    # --------------------------------------------------------
+    # API response
+    # --------------------------------------------------------
+
+    return {
+        "author_id": author.id,
+        "author_name": author.name,
+        "orcid": author.orcid,
+        "papers": papers,
+    }

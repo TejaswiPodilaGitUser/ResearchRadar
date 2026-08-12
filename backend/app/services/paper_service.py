@@ -1,12 +1,88 @@
 from typing import Optional
 
-from sqlalchemy import func, or_, text
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.models.paper import Paper
-from app.models.author import Author
-from app.models.topic import Topic
+from app.database.queries.paper_queries import (
+    find_papers,
+    find_paper_by_id,
+)
+
+
+# ============================================================
+# Paper Mapping
+# ============================================================
+
+def _paper_to_response(paper) -> dict:
+    """
+    Convert Paper model into API response format.
+    """
+
+    return {
+        "paper_id": paper.id,
+        "paper_name": paper.title,
+        "publication_year": paper.publication_year,
+        "cited_by_count": paper.cited_by_count,
+    }
+
+
+# ============================================================
+# Author Mapping
+# ============================================================
+
+def _author_to_response(author) -> dict:
+    """
+    Convert Author model into API response format.
+    """
+
+    return {
+        "author_id": author.id,
+        "author_name": author.name,
+    }
+
+
+# ============================================================
+# Topic Mapping
+# ============================================================
+
+def _topic_to_response(topic) -> dict:
+    """
+    Convert Topic model into API response format.
+    """
+
+    return {
+        "topic_id": topic.id,
+        "topic_name": topic.name,
+    }
+
+
+# ============================================================
+# Paper Detail Mapping
+# ============================================================
+
+def _paper_detail_to_response(paper) -> dict:
+    """
+    Convert Paper model into detailed API response.
+    """
+
+    return {
+        "paper_id": paper.id,
+        "paper_name": paper.title,
+        "abstract": paper.abstract,
+        "publication_year": paper.publication_year,
+        "doi": paper.doi,
+        "cited_by_count": paper.cited_by_count,
+
+        "authors": [
+            _author_to_response(author)
+            for author in paper.authors
+        ],
+
+        "topics": [
+            _topic_to_response(topic)
+            for topic in paper.topics
+        ],
+    }
 
 
 # ============================================================
@@ -24,14 +100,6 @@ def search_papers(
 ):
     """
     Search and filter research papers.
-
-    Supports:
-        - Pagination
-        - Title search
-        - Abstract search
-        - Publication year
-        - Topic
-        - Author
     """
 
     # --------------------------------------------------------
@@ -55,8 +123,8 @@ def search_papers(
     # --------------------------------------------------------
 
     page = max(
-        page,
         settings.DEFAULT_PAGE,
+        page,
     )
 
     size = max(
@@ -67,119 +135,36 @@ def search_papers(
         ),
     )
 
-    offset = (page - 1) * size
+    offset = (
+        page - 1
+    ) * size
 
     # --------------------------------------------------------
-    # Base query
+    # Database query
     # --------------------------------------------------------
 
-    query = db.query(Paper)
-
-    # --------------------------------------------------------
-    # Keyword filter
-    # --------------------------------------------------------
-
-    if keyword:
-        keyword = keyword.strip()
-
-        if keyword:
-            search_text = f"%{keyword}%"
-
-            query = query.filter(
-                or_(
-                    Paper.title.ilike(
-                        search_text
-                    ),
-                    Paper.abstract.ilike(
-                        search_text
-                    ),
-                )
-            )
-
-    # --------------------------------------------------------
-    # Publication year filter
-    # --------------------------------------------------------
-
-    if year is not None:
-        query = query.filter(
-            Paper.publication_year == year
-        )
-
-    # --------------------------------------------------------
-    # Topic filter
-    # --------------------------------------------------------
-
-    if topic:
-        topic = topic.strip()
-
-        if topic:
-            query = (
-                query
-                .join(Paper.topics)
-                .filter(
-                    Topic.name.ilike(
-                        f"%{topic}%"
-                    )
-                )
-            )
-
-    # --------------------------------------------------------
-    # Author filter
-    # --------------------------------------------------------
-
-    if author:
-        author = author.strip()
-
-        if author:
-            query = (
-                query
-                .join(Paper.authors)
-                .filter(
-                    Author.name.ilike(
-                        f"%{author}%"
-                    )
-                )
-            )
-
-    # --------------------------------------------------------
-    # Total count
-    # --------------------------------------------------------
-
-    total = (
-        query
-        .with_entities(
-            func.count(
-                func.distinct(Paper.id)
-            )
-        )
-        .scalar()
-    ) or 0
-
-    # --------------------------------------------------------
-    # Fetch paginated results
-    # --------------------------------------------------------
-
-    papers = (
-        query
-        .distinct()
-        .order_by(
-            Paper.publication_year.desc(),
-            Paper.id.desc(),
-        )
-        .offset(offset)
-        .limit(size)
-        .all()
+    total, papers = find_papers(
+        db=db,
+        offset=offset,
+        limit=size,
+        keyword=keyword,
+        year=year,
+        topic=topic,
+        author=author,
     )
 
     # --------------------------------------------------------
-    # API response
+    # Response
     # --------------------------------------------------------
 
     return {
         "page": page,
         "page_size": size,
         "total": total,
-        "results": papers,
+        "results": [
+            _paper_to_response(paper)
+            for paper in papers
+        ],
     }
 
 
@@ -190,61 +175,17 @@ def search_papers(
 def get_paper_by_id(
     db: Session,
     paper_id: int,
-) -> Optional[Paper]:
+) -> Optional[dict]:
     """
-    Retrieve a paper by database ID.
-
-    Temporary database diagnostics are included here
-    to verify that FastAPI is connected to the same
-    PostgreSQL database as the ingestion process.
+    Get complete paper details.
     """
 
-    # --------------------------------------------------------
-    # TEMPORARY DATABASE DIAGNOSTICS
-    # --------------------------------------------------------
-
-    database = db.execute(
-        text("SELECT current_database()")
-    ).scalar()
-
-    schema = db.execute(
-        text("SELECT current_schema()")
-    ).scalar()
-
-    count = db.execute(
-        text("SELECT COUNT(*) FROM papers")
-    ).scalar()
-
-    paper_exists = db.execute(
-        text(
-            """
-            SELECT id, title
-            FROM papers
-            WHERE id = :paper_id
-            """
-        ),
-        {
-            "paper_id": paper_id,
-        },
-    ).first()
-
-    print("==========================================")
-    print("API DATABASE:", database)
-    print("API SCHEMA:", schema)
-    print("API PAPER COUNT:", count)
-    print("API PAPER ID:", paper_id)
-    print("API PAPER EXISTS:", paper_exists)
-    print("==========================================")
-
-    # --------------------------------------------------------
-    # SQLAlchemy ORM query
-    # --------------------------------------------------------
-
-    return (
-        db.query(Paper)
-        .filter(
-            Paper.id == paper_id
-        )
-        .first()
+    paper = find_paper_by_id(
+        db=db,
+        paper_id=paper_id,
     )
 
+    if paper is None:
+        return None
+
+    return _paper_detail_to_response(paper)

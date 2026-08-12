@@ -1,11 +1,50 @@
 from typing import Optional
 
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+
+from app.database.queries.topic_queries import (
+    search_topics as query_search_topics,
+    find_topic_by_id,
+)
+
 from app.models.topic import Topic
 
+
+# ============================================================
+# Topic Mapping
+# ============================================================
+
+def _topic_to_response(
+    topic: Topic,
+) -> dict:
+
+    return {
+        "topic_id": topic.id,
+        "topic_name": topic.name,
+    }
+
+
+# ============================================================
+# Paper Mapping
+# ============================================================
+
+def _paper_to_response(
+    paper,
+) -> dict:
+
+    return {
+        "paper_id": paper.id,
+        "paper_name": paper.title,
+        "publication_year": paper.publication_year,
+        "cited_by_count": paper.cited_by_count,
+    }
+
+
+# ============================================================
+# Search Topics
+# ============================================================
 
 def search_topics(
     db: Session,
@@ -14,8 +53,12 @@ def search_topics(
     keyword: Optional[str] = None,
 ):
     """
-    Search and paginate topics.
+    Search topics with pagination.
     """
+
+    # --------------------------------------------------------
+    # Defaults
+    # --------------------------------------------------------
 
     page = (
         page
@@ -28,6 +71,10 @@ def search_topics(
         if size is not None
         else settings.DEFAULT_PAGE_SIZE
     )
+
+    # --------------------------------------------------------
+    # Guardrails
+    # --------------------------------------------------------
 
     page = max(
         page,
@@ -42,59 +89,64 @@ def search_topics(
         ),
     )
 
-    query = db.query(Topic)
+    # --------------------------------------------------------
+    # Database query
+    # --------------------------------------------------------
 
-    if keyword:
-        keyword = keyword.strip()
-
-        if keyword:
-            query = query.filter(
-                Topic.name.ilike(
-                    f"%{keyword}%"
-                )
-            )
-
-    total = (
-        query
-        .with_entities(
-            func.count(Topic.id)
-        )
-        .scalar()
-    ) or 0
-
-    offset = (page - 1) * size
-
-    topics = (
-        query
-        .order_by(
-            Topic.name.asc(),
-            Topic.id.asc(),
-        )
-        .offset(offset)
-        .limit(size)
-        .all()
+    total, topics = query_search_topics(
+        db=db,
+        page=page,
+        size=size,
+        keyword=keyword,
     )
+
+    # --------------------------------------------------------
+    # Response
+    # --------------------------------------------------------
 
     return {
         "page": page,
         "page_size": size,
         "total": total,
-        "results": topics,
+        "results": [
+            _topic_to_response(topic)
+            for topic in topics
+        ],
     }
 
+
+# ============================================================
+# Get Topic By ID
+# ============================================================
 
 def get_topic_by_id(
     db: Session,
     topic_id: int,
-) -> Optional[Topic]:
-    """
-    Get topic including associated papers.
-    """
+) -> Optional[dict]:
 
-    return (
-        db.query(Topic)
-        .filter(
-            Topic.id == topic_id
-        )
-        .first()
+    topic = find_topic_by_id(
+        db=db,
+        topic_id=topic_id,
     )
+
+    if topic is None:
+        return None
+
+    # --------------------------------------------------------
+    # Associated papers
+    # --------------------------------------------------------
+
+    papers = [
+        _paper_to_response(paper)
+        for paper in topic.papers
+    ]
+
+    # --------------------------------------------------------
+    # Response
+    # --------------------------------------------------------
+
+    return {
+        "topic_id": topic.id,
+        "topic_name": topic.name,
+        "papers": papers,
+    }

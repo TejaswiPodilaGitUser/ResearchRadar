@@ -1,14 +1,10 @@
 from typing import Optional
 
-from fastapi import (
-    APIRouter,
-    Depends,
-    HTTPException,
-    Query,
-)
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.exceptions import ResourceNotFoundException
 from app.database.database import get_db
 
 from app.schemas.author_schema import (
@@ -96,10 +92,9 @@ def get_author(
     )
 
     if author is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Author with id {author_id} not found",
+        raise ResourceNotFoundException(
+            resource="Author",
+            resource_id=author_id,
         )
 
     return author
-

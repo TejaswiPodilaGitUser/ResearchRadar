@@ -1,8 +1,13 @@
-from sqlalchemy import Column, BigInteger, String, DateTime
-from sqlalchemy.orm import relationship
-from datetime import datetime
+from sqlalchemy import (
+    BigInteger,
+    Column,
+    String,
+)
 
-from app.database.database import Base
+from sqlalchemy.orm import relationship
+
+from app.database.base import Base
+from app.models.associations.paper_author import paper_authors
 
 
 class Author(Base):
@@ -12,35 +17,32 @@ class Author(Base):
     id = Column(
         BigInteger,
         primary_key=True,
-        index=True
-    )
-
-    openalex_id = Column(
-        String(100),
-        unique=True,
-        nullable=False,
-        index=True
+        index=True,
     )
 
     name = Column(
-        String(255),
-        nullable=False
+        String(500),
+        nullable=False,
+        index=True,
     )
 
     orcid = Column(
-        String(255),
-        nullable=True
+        String(100),
+        nullable=True,
     )
 
-    created_at = Column(
-        DateTime,
-        default=datetime.utcnow
-    )
-
-
-    # Many-to-many relationship with papers
     papers = relationship(
         "Paper",
-        secondary="paper_authors",
-        back_populates="authors"
+        secondary=paper_authors,
+        back_populates="authors",
+        lazy="selectin",
     )
+
+    def __repr__(self):
+
+        return (
+            f"<Author("
+            f"id={self.id}, "
+            f"name='{self.name}'"
+            f")>"
+        )

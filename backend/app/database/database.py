@@ -1,26 +1,25 @@
-import os
-
-from dotenv import load_dotenv
 from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
-
-load_dotenv()
-
-
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-if not DATABASE_URL:
-    raise RuntimeError(
-        "DATABASE_URL is not configured"
-    )
-
-
-engine = create_engine(
-    DATABASE_URL,
-    pool_pre_ping=True,
-    echo=False,
+from sqlalchemy.orm import (
+    Session,
+    sessionmaker,
 )
 
+from app.core.config import settings
+
+
+# ============================================================
+# Engine
+# ============================================================
+
+engine = create_engine(
+    settings.DATABASE_URL,
+    pool_pre_ping=True,
+)
+
+
+# ============================================================
+# Session
+# ============================================================
 
 SessionLocal = sessionmaker(
     autocommit=False,
@@ -29,18 +28,18 @@ SessionLocal = sessionmaker(
 )
 
 
-Base = declarative_base()
-
+# ============================================================
+# Dependency
+# ============================================================
 
 def get_db():
     """
-    FastAPI database dependency.
+    Provide database session to API request.
     """
 
-    db = SessionLocal()
+    db: Session = SessionLocal()
 
     try:
         yield db
-
     finally:
         db.close()

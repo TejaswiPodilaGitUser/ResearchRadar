@@ -3,7 +3,6 @@ from typing import Optional
 from fastapi import (
     APIRouter,
     Depends,
-    Path,
     Query,
 )
 
@@ -46,6 +45,7 @@ router = APIRouter(
     response_model=PaginatedPaperResponse,
 )
 def get_papers(
+
     page: int = Query(
         default=settings.DEFAULT_PAGE,
         ge=1,
@@ -62,10 +62,7 @@ def get_papers(
     keyword: Optional[str] = Query(
         default=None,
         max_length=settings.MAX_KEYWORD_LENGTH,
-        description=(
-            "Search keyword in paper "
-            "title or abstract"
-        ),
+        description="Search title or abstract",
     ),
 
     year: Optional[int] = Query(
@@ -91,14 +88,6 @@ def get_papers(
 ):
     """
     Search and filter research papers.
-
-    Supports:
-
-    - Pagination
-    - Keyword search
-    - Publication year
-    - Topic
-    - Author
     """
 
     return search_papers(
@@ -121,16 +110,11 @@ def get_papers(
     response_model=PaperDetailResponse,
 )
 def get_paper(
-    paper_id: int = Path(
-        ...,
-        ge=1,
-        description="Database ID of the paper",
-    ),
-
+    paper_id: int,
     db: Session = Depends(get_db),
 ):
     """
-    Get complete details for a research paper.
+    Get complete paper details.
     """
 
     paper = get_paper_by_id(
@@ -145,4 +129,3 @@ def get_paper(
         )
 
     return paper
-

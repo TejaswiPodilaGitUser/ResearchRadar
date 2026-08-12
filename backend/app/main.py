@@ -22,6 +22,7 @@ from app.api.papers import router as papers_router
 from app.api.search import router as search_router
 from app.api.authors import router as authors_router
 from app.api.topics import router as topics_router
+
 from app.api.recommendations import (
     router as recommendations_router,
 )

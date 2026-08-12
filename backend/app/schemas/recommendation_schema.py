@@ -1,17 +1,13 @@
 from typing import List, Optional
 
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    Field,
-)
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # ============================================================
-# Author Response
+# Recommendation Author
 # ============================================================
 
-class AuthorResponse(BaseModel):
+class RecommendationAuthorResponse(BaseModel):
 
     author_id: int
     author_name: str
@@ -22,10 +18,10 @@ class AuthorResponse(BaseModel):
 
 
 # ============================================================
-# Topic Response
+# Recommendation Topic
 # ============================================================
 
-class TopicResponse(BaseModel):
+class RecommendationTopicResponse(BaseModel):
 
     topic_id: int
     topic_name: str
@@ -36,60 +32,48 @@ class TopicResponse(BaseModel):
 
 
 # ============================================================
-# Paper List Response
+# Recommended Paper
 # ============================================================
 
-class PaperListResponse(BaseModel):
-
-    paper_id: int
-    paper_name: str
-
-    publication_year: Optional[int] = None
-    cited_by_count: Optional[int] = 0
-
-    model_config = ConfigDict(
-        from_attributes=True
-    )
-
-
-# ============================================================
-# Paper Detail Response
-# ============================================================
-
-class PaperDetailResponse(BaseModel):
+class RecommendationPaperResponse(BaseModel):
 
     paper_id: int
     paper_name: str
 
     abstract: Optional[str] = None
     publication_year: Optional[int] = None
+    publication_date: Optional[str] = None
     doi: Optional[str] = None
-    cited_by_count: Optional[int] = 0
+    cited_by_count: Optional[int] = None
 
-    authors: List[AuthorResponse] = Field(
+    authors: List[RecommendationAuthorResponse] = Field(
         default_factory=list
     )
 
-    topics: List[TopicResponse] = Field(
+    topics: List[RecommendationTopicResponse] = Field(
         default_factory=list
-    )
-
-    model_config = ConfigDict(
-        from_attributes=True
     )
 
 
 # ============================================================
-# Paginated Paper Response
+# Recommendation List
 # ============================================================
 
-class PaginatedPaperResponse(BaseModel):
+class RecommendationListResponse(BaseModel):
 
-    page: int
-    page_size: int
-    total: int
+    results: List[RecommendationPaperResponse]
 
-    results: List[PaperListResponse]
+
+# ============================================================
+# Trending Paper
+# ============================================================
+
+class TrendingPaperResponse(BaseModel):
+    paper_id: int
+    paper_name: str
+
+    publication_year: Optional[int] = None
+    cited_by_count: Optional[int] = None
 
     model_config = ConfigDict(
         from_attributes=True

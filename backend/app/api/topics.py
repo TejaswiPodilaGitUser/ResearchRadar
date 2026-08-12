@@ -3,12 +3,17 @@ from typing import Optional
 from fastapi import (
     APIRouter,
     Depends,
-    HTTPException,
     Query,
 )
+
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+
+from app.core.exceptions import (
+    ResourceNotFoundException,
+)
+
 from app.database.database import get_db
 
 from app.schemas.topic_schema import (
@@ -22,11 +27,19 @@ from app.services.topic_service import (
 )
 
 
+# ============================================================
+# Router
+# ============================================================
+
 router = APIRouter(
     prefix="/topics",
     tags=["Topics"],
 )
 
+
+# ============================================================
+# GET /topics
+# ============================================================
 
 @router.get(
     "",
@@ -66,6 +79,10 @@ def get_topics(
     )
 
 
+# ============================================================
+# GET /topics/{topic_id}
+# ============================================================
+
 @router.get(
     "/{topic_id}",
     response_model=TopicDetailResponse,
@@ -84,10 +101,10 @@ def get_topic(
     )
 
     if topic is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Topic with id {topic_id} not found",
+
+        raise ResourceNotFoundException(
+            resource="Topic",
+            resource_id=topic_id,
         )
 
     return topic
-

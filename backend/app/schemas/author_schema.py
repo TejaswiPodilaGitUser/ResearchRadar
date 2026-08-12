@@ -8,8 +8,8 @@ from pydantic import BaseModel, ConfigDict
 # ============================================================
 
 class AuthorListResponse(BaseModel):
-    id: int
-    name: str
+    author_id: int
+    author_name: str
     orcid: Optional[str] = None
 
     model_config = ConfigDict(
@@ -18,12 +18,12 @@ class AuthorListResponse(BaseModel):
 
 
 # ============================================================
-# Author Paper
+# Author's Paper
 # ============================================================
 
 class AuthorPaperResponse(BaseModel):
-    id: int
-    title: str
+    paper_id: int
+    paper_name: str
     publication_year: Optional[int] = None
     cited_by_count: Optional[int] = None
 
@@ -37,9 +37,10 @@ class AuthorPaperResponse(BaseModel):
 # ============================================================
 
 class AuthorDetailResponse(BaseModel):
-    id: int
-    name: str
+    author_id: int
+    author_name: str
     orcid: Optional[str] = None
+
     papers: List[AuthorPaperResponse] = []
 
     model_config = ConfigDict(
@@ -55,4 +56,5 @@ class PaginatedAuthorResponse(BaseModel):
     page: int
     page_size: int
     total: int
+
     results: List[AuthorListResponse]
