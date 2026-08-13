@@ -1,50 +1,76 @@
+import {
+  SEARCH_MODE_OPTIONS,
+  type SearchMode,
+} from "../../config/search";
+
 interface SearchBarProps {
   value: string;
   onChange: (value: string) => void;
-  onSubmit?: () => void;
+  searchMode: SearchMode;
+  onSearchModeChange: (mode: SearchMode) => void;
   placeholder?: string;
 }
 
 function SearchBar({
   value,
   onChange,
-  onSubmit,
+  searchMode,
+  onSearchModeChange,
   placeholder = "Search research papers...",
 }: Readonly<SearchBarProps>) {
-  const handleSubmit = (
-    event: React.SyntheticEvent<HTMLFormElement>,
-  ): void => {
-    event.preventDefault();
-    onSubmit?.();
-  };
-
   return (
-    <form
-      onSubmit={handleSubmit}
+    <div
+      className="search-control"
       role="search"
-      style={{
-        display: "flex",
-        gap: "12px",
-        alignItems: "stretch",
-      }}
     >
-      <div className="search-input-wrapper">
-        <span className="search-icon">🔍</span>
+      {/* Search Icon */}
+      <span
+        className="search-icon"
+        aria-hidden="true"
+      >
+        🔍
+      </span>
 
-        <input
-          type="search"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-          autoComplete="off"
-          className="search-input"
-        />
-      </div>
+      {/* Search Input */}
+      <input
+        type="search"
+        value={value}
+        onChange={(event) =>
+          onChange(event.target.value)
+        }
+        placeholder={placeholder}
+        autoComplete="off"
+        className="search-input"
+        aria-label="Search research papers"
+      />
 
-      <button type="submit" className="search-button">
-        Search
-      </button>
-    </form>
+      {/* Divider */}
+      <span
+        className="search-mode-divider"
+        aria-hidden="true"
+      />
+
+      {/* Search Mode */}
+      <select
+        className="search-mode-select"
+        value={searchMode}
+        aria-label="Search mode"
+        onChange={(event) =>
+          onSearchModeChange(
+            event.target.value as SearchMode,
+          )
+        }
+      >
+        {SEARCH_MODE_OPTIONS.map((option) => (
+          <option
+            key={option.value}
+            value={option.value}
+          >
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </div>
   );
 }
 

@@ -1,6 +1,4 @@
-Yes. Your current README is good technically, but it is **behind the actual state of the project**. In particular, it should now mention the React frontend, metrics/API performance monitoring, the actual 299-paper corpus, and the assignment requirements such as Docker, migrations, tests, and the AI feature status.
 
-I would replace it with this cleaner submission-ready version:
 
 ````markdown
 # Research Radar

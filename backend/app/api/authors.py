@@ -1,6 +1,11 @@
-from typing import Optional
+from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import (
+    APIRouter,
+    Depends,
+    Query,
+)
+
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -10,11 +15,14 @@ from app.database.database import get_db
 from app.schemas.author_schema import (
     PaginatedAuthorResponse,
     AuthorDetailResponse,
+    MultipleAuthorsResponse,
 )
 
 from app.services.author_service import (
     search_authors,
     get_author_by_id,
+    get_multiple_authors,
+    get_multiple_authors_by_names,
 )
 
 
@@ -29,37 +37,65 @@ router = APIRouter(
 
 
 # ============================================================
+# Dependencies
+# ============================================================
+
+DbSession = Annotated[
+    Session,
+    Depends(get_db),
+]
+
+
+# ============================================================
 # GET /authors
 # ============================================================
 
 @router.get(
     "",
     response_model=PaginatedAuthorResponse,
+    summary="Get Author",
 )
 def get_authors(
-    page: int = Query(
-        default=settings.DEFAULT_PAGE,
-        ge=1,
-        description="Page number",
-    ),
+    db: DbSession,
 
-    size: int = Query(
-        default=settings.DEFAULT_PAGE_SIZE,
-        ge=1,
-        le=settings.MAX_PAGE_SIZE,
-        description="Number of authors per page",
-    ),
+    page: Annotated[
+        int,
+        Query(
+            ge=1,
+            description="Page number",
+        ),
+    ] = settings.DEFAULT_PAGE,
 
-    keyword: Optional[str] = Query(
-        default=None,
-        max_length=settings.MAX_AUTHOR_LENGTH,
-        description="Search authors by name",
-    ),
+    size: Annotated[
+        int,
+        Query(
+            ge=1,
+            le=settings.MAX_PAGE_SIZE,
+            description="Number of authors per page",
+        ),
+    ] = settings.DEFAULT_PAGE_SIZE,
 
-    db: Session = Depends(get_db),
+    keyword: Annotated[
+        Optional[str],
+        Query(
+            max_length=settings.MAX_AUTHOR_LENGTH,
+            description=(
+                "Single author ID or single author name."
+            ),
+        ),
+    ] = None,
 ):
     """
-    Search and paginate authors.
+    Search authors with pagination.
+
+    Supported:
+
+        Single author ID:
+        /api/authors?keyword=2150
+
+        Single author name:
+        /api/authors?keyword=A%20Ford
+
     """
 
     return search_authors(
@@ -70,6 +106,7 @@ def get_authors(
     )
 
 
+
 # ============================================================
 # GET /authors/{author_id}
 # ============================================================
@@ -77,10 +114,11 @@ def get_authors(
 @router.get(
     "/{author_id}",
     response_model=AuthorDetailResponse,
+    summary="Get Author by id",
 )
 def get_author(
+    db: DbSession,
     author_id: int,
-    db: Session = Depends(get_db),
 ):
     """
     Get author details and associated papers.
@@ -98,3 +136,164 @@ def get_author(
         )
 
     return author
+
+# ============================================================
+# GET /authors/multiple/ids
+# ============================================================
+
+@router.get(
+    "/multiple/ids",
+    response_model=MultipleAuthorsResponse,
+    summary="Get Multiple Authors By Ids",
+)
+def get_multiple_authors_by_ids_endpoint(
+    db: DbSession,
+
+    author_ids: Annotated[
+        str,
+        Query(
+            min_length=1,
+            description=(
+                "Comma-separated author IDs. "
+                "Example: 2208,1561,2150"
+            ),
+        ),
+    ],
+):
+    """
+    Get research information for multiple authors
+    using author IDs.
+
+    Example:
+
+        /api/authors/multiple/ids?author_ids=2208,1561,2150
+    """
+
+    # --------------------------------------------------------
+    # Parse IDs
+    # --------------------------------------------------------
+
+    values = [
+        value.strip()
+        for value in author_ids.split(",")
+        if value.strip()
+    ]
+
+    # --------------------------------------------------------
+    # Validate number of IDs
+    # --------------------------------------------------------
+
+    if len(values) < 2:
+        raise ValueError(
+            "At least two author IDs are required."
+        )
+
+    # --------------------------------------------------------
+    # Validate IDs
+    # --------------------------------------------------------
+
+    if not all(
+        value.isdigit()
+        for value in values
+    ):
+        raise ValueError(
+            "author_ids must contain only "
+            "comma-separated integers."
+        )
+
+    # --------------------------------------------------------
+    # Convert IDs
+    # --------------------------------------------------------
+
+    parsed_ids = [
+        int(value)
+        for value in values
+    ]
+
+    # --------------------------------------------------------
+    # Get multiple authors
+    # --------------------------------------------------------
+
+    return get_multiple_authors(
+        db=db,
+        author_ids=parsed_ids,
+    )
+
+
+# ============================================================
+# GET /authors/multiple/names
+# ============================================================
+
+@router.get(
+    "/multiple/names",
+    response_model=MultipleAuthorsResponse,
+    summary="Get Multiple Authors By Names",
+)
+def get_multiple_authors_by_names_endpoint(
+    db: DbSession,
+
+    author_names: Annotated[
+        str,
+        Query(
+            min_length=1,
+            max_length=settings.MAX_AUTHOR_LENGTH,
+            description=(
+                "Comma-separated author names. "
+                "Example: "
+                "A. H. Alamoodi,A Ford,裕二 池谷"
+            ),
+        ),
+    ],
+):
+    """
+    Get research information for multiple authors
+    using author names.
+
+    Comma is the only separator.
+
+    Names may contain:
+
+        - spaces
+        - dots
+        - apostrophes
+        - hyphens
+        - Unicode characters
+
+    Examples:
+
+        A. H. Alamoodi,A Ford
+
+        裕二 池谷,A. H. Alamoodi
+
+        Μαρία Ανδρέου,A Ford
+
+        O'Connor,Smith-Jones
+    """
+
+    # --------------------------------------------------------
+    # Parse names
+    # --------------------------------------------------------
+
+    names = [
+        name.strip()
+        for name in author_names.split(",")
+        if name.strip()
+    ]
+
+    # --------------------------------------------------------
+    # Validate number of names
+    # --------------------------------------------------------
+
+    if len(names) < 2:
+        raise ValueError(
+            "At least two author names are required."
+        )
+
+    # --------------------------------------------------------
+    # Get multiple authors
+    # --------------------------------------------------------
+
+    return get_multiple_authors_by_names(
+        db=db,
+        author_names=names,
+    )

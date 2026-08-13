@@ -1,0 +1,397 @@
+/* ============================================================
+   Research Radar
+   Main Navigation
+   ============================================================ */
+
+.main-navigation {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+
+  width: 100%;
+
+  background: rgba(255, 255, 255, 0.96);
+
+  border-bottom: 1px solid #e5e7eb;
+
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+
+/* ============================================================
+   Navigation Container
+   ============================================================ */
+
+.navigation-container {
+  width: 100%;
+  max-width: 1200px;
+
+  min-height: 72px;
+
+  margin: 0 auto;
+  padding: 0 24px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 42px;
+
+  box-sizing: border-box;
+}
+
+
+/* ============================================================
+   Brand
+   ============================================================ */
+
+.navigation-brand {
+  display: inline-flex;
+  align-items: center;
+
+  gap: 10px;
+
+  flex-shrink: 0;
+
+  text-decoration: none;
+
+  color: #111827;
+
+  outline: none;
+}
+
+
+.navigation-brand:focus-visible {
+  border-radius: 8px;
+
+  box-shadow:
+    0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+
+/* ============================================================
+   Brand Icon
+   ============================================================ */
+
+.brand-icon {
+  width: 36px;
+  height: 36px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  border-radius: 10px;
+
+  background: #111827;
+
+  color: #ffffff;
+
+  font-size: 16px;
+  font-weight: 800;
+
+  letter-spacing: -0.02em;
+}
+
+
+/* ============================================================
+   Brand Text
+   ============================================================ */
+
+.brand-text {
+  font-size: 16px;
+  font-weight: 750;
+
+  letter-spacing: -0.025em;
+
+  white-space: nowrap;
+
+  color: #111827;
+}
+
+
+/* ============================================================
+   Navigation Tabs
+   ============================================================ */
+
+.navigation-tabs {
+  display: flex;
+  align-items: center;
+
+  gap: 4px;
+
+  height: 72px;
+
+  flex: 1;
+}
+
+
+/* ============================================================
+   Individual Tab
+   ============================================================ */
+
+.navigation-tab {
+  position: relative;
+
+  height: 42px;
+
+  padding: 0 14px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 7px;
+
+  border-radius: 9px;
+
+  color: #6b7280;
+
+  text-decoration: none;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  white-space: nowrap;
+
+  transition:
+    color 0.18s ease,
+    background-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+
+.navigation-tab:hover {
+  color: #111827;
+
+  background: #f3f4f6;
+}
+
+
+/* ============================================================
+   Active Tab
+   ============================================================ */
+
+.navigation-tab-active {
+  color: #111827;
+
+  background: #f3f4f6;
+}
+
+
+.navigation-tab-active::after {
+  content: "";
+
+  position: absolute;
+
+  left: 14px;
+  right: 14px;
+
+  bottom: -15px;
+
+  height: 2px;
+
+  border-radius: 999px;
+
+  background: #111827;
+}
+
+
+/* ============================================================
+   Tab Icon
+   ============================================================ */
+
+.navigation-tab-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 18px;
+  height: 18px;
+
+  font-size: 15px;
+
+  line-height: 1;
+
+  flex-shrink: 0;
+}
+
+
+/* ============================================================
+   Recommendations Tab
+   ============================================================ */
+
+.navigation-tab:last-child {
+  margin-left: 8px;
+}
+
+
+/* ============================================================
+   Keyboard Accessibility
+   ============================================================ */
+
+.navigation-tab:focus-visible {
+  outline: none;
+
+  box-shadow:
+    0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+
+
+/* ============================================================
+   Responsive - Tablet
+   ============================================================ */
+
+@media (max-width: 950px) {
+  .navigation-container {
+    gap: 20px;
+  }
+
+  .navigation-tab {
+    padding: 0 11px;
+
+    font-size: 13px;
+  }
+
+  .navigation-tab-active::after {
+    left: 11px;
+    right: 11px;
+  }
+}
+
+
+/* ============================================================
+   Responsive - Small Tablet
+   ============================================================ */
+
+@media (max-width: 800px) {
+  .navigation-container {
+    gap: 14px;
+  }
+
+  .brand-text {
+    display: none;
+  }
+
+  .navigation-tabs {
+    gap: 3px;
+  }
+
+  .navigation-tab {
+    padding: 0 10px;
+  }
+
+  .navigation-tab-active::after {
+    left: 10px;
+    right: 10px;
+  }
+}
+
+
+/* ============================================================
+   Responsive - Mobile
+   ============================================================ */
+
+@media (max-width: 650px) {
+  .navigation-container {
+    min-height: 64px;
+
+    padding: 0 12px;
+
+    gap: 10px;
+  }
+
+  .navigation-tabs {
+    height: 64px;
+
+    overflow-x: auto;
+
+    scrollbar-width: none;
+
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .navigation-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .navigation-tab {
+    height: 40px;
+
+    flex-shrink: 0;
+
+    padding: 0 10px;
+
+    font-size: 13px;
+  }
+
+  .navigation-tab-active::after {
+    bottom: -12px;
+
+    left: 10px;
+    right: 10px;
+  }
+
+  .navigation-tab:last-child {
+    margin-left: 0;
+  }
+}
+
+
+/* ============================================================
+   Very Small Mobile
+   ============================================================ */
+
+@media (max-width: 420px) {
+  .navigation-container {
+    padding: 0 8px;
+
+    gap: 6px;
+  }
+
+  .brand-icon {
+    width: 32px;
+    height: 32px;
+
+    border-radius: 9px;
+
+    font-size: 14px;
+  }
+
+  .navigation-tabs {
+    gap: 2px;
+  }
+
+  .navigation-tab {
+    padding: 0 8px;
+
+    gap: 5px;
+
+    font-size: 12px;
+  }
+
+  .navigation-tab-icon {
+    width: 16px;
+    height: 16px;
+
+    font-size: 14px;
+  }
+
+  .navigation-tab-active::after {
+    left: 8px;
+    right: 8px;
+  }
+}
+
+
+/* ============================================================
+   Reduced Motion
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .navigation-tab {
+    transition: none;
+  }
+}
