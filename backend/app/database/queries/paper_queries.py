@@ -1,7 +1,10 @@
 from typing import Optional
 
 from sqlalchemy import func, or_
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import (
+    Session,
+    selectinload,
+)
 
 from app.models.paper import Paper
 from app.models.author import Author
@@ -124,13 +127,113 @@ def find_paper_by_id(
     paper_id: int,
 ) -> Optional[Paper]:
     """
-    Find a paper by database ID.
+    Find a single paper by database ID.
     """
 
     return (
         db.query(Paper)
+        .options(
+            selectinload(Paper.authors),
+            selectinload(Paper.topics),
+        )
         .filter(
             Paper.id == paper_id
         )
         .first()
     )
+
+
+# ============================================================
+# Get Papers By IDs
+# ============================================================
+
+def find_papers_by_ids(
+    db: Session,
+    paper_ids: list[int],
+) -> list[Paper]:
+    """
+    Find multiple papers by database IDs.
+
+    Optimized for fetching a collection of papers.
+
+    Characteristics:
+        - Single primary Paper query.
+        - selectinload for authors.
+        - selectinload for topics.
+        - No N+1 relationship queries.
+        - Duplicate IDs are removed before querying.
+        - Results are returned in requested ID order.
+    """
+
+    # --------------------------------------------------------
+    # Empty collection
+    # --------------------------------------------------------
+
+    if not paper_ids:
+        return []
+
+    # --------------------------------------------------------
+    # Remove duplicates while preserving order
+    #
+    # Example:
+    #
+    # [101, 102, 101, 103]
+    #
+    # becomes:
+    #
+    # [101, 102, 103]
+    # --------------------------------------------------------
+
+    unique_ids = list(
+        dict.fromkeys(paper_ids)
+    )
+
+    # --------------------------------------------------------
+    # Fetch papers
+    #
+    # SQL equivalent:
+    #
+    # SELECT ...
+    # FROM papers
+    # WHERE id IN (...)
+    #
+    # Relationships are loaded using selectinload.
+    # --------------------------------------------------------
+
+    papers = (
+        db.query(Paper)
+        .options(
+            selectinload(Paper.authors),
+            selectinload(Paper.topics),
+        )
+        .filter(
+            Paper.id.in_(unique_ids)
+        )
+        .all()
+    )
+
+    # --------------------------------------------------------
+    # Preserve requested order
+    #
+    # Database does not guarantee IN(...) ordering.
+    #
+    # If frontend sends:
+    #
+    # [103, 101, 102]
+    #
+    # response will also be:
+    #
+    # [103, 101, 102]
+    # --------------------------------------------------------
+
+    papers_by_id = {
+        paper.id: paper
+        for paper in papers
+    }
+
+    return [
+        papers_by_id[paper_id]
+        for paper_id in unique_ids
+        if paper_id in papers_by_id
+    ]
+

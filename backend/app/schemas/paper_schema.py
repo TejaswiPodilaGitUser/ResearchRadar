@@ -94,3 +94,31 @@ class PaginatedPaperResponse(BaseModel):
     model_config = ConfigDict(
         from_attributes=True
     )
+
+
+# ============================================================
+# Paper Collection Response
+# ============================================================
+
+class PaperCollectionResponse(BaseModel):
+    """
+    Response containing multiple paper details.
+    """
+
+    results: List[PaperDetailResponse] = Field(
+        default_factory=list
+    )
+
+    requested_count: int = Field(
+        ge=0,
+        description="Number of paper IDs requested.",
+    )
+
+    returned_count: int = Field(
+        ge=0,
+        description="Number of papers found.",
+    )
+
+    model_config = ConfigDict(
+        from_attributes=True
+    )

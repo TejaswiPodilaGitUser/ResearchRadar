@@ -6,6 +6,7 @@ from app.core.config import settings
 from app.database.queries.paper_queries import (
     find_papers,
     find_paper_by_id,
+    find_papers_by_ids,
 )
 
 
@@ -102,10 +103,6 @@ def search_papers(
     Search and filter research papers.
     """
 
-    # --------------------------------------------------------
-    # Pagination defaults
-    # --------------------------------------------------------
-
     page = (
         page
         if page is not None
@@ -117,10 +114,6 @@ def search_papers(
         if size is not None
         else settings.DEFAULT_PAGE_SIZE
     )
-
-    # --------------------------------------------------------
-    # Pagination guardrails
-    # --------------------------------------------------------
 
     page = max(
         settings.DEFAULT_PAGE,
@@ -139,10 +132,6 @@ def search_papers(
         page - 1
     ) * size
 
-    # --------------------------------------------------------
-    # Database query
-    # --------------------------------------------------------
-
     total, papers = find_papers(
         db=db,
         offset=offset,
@@ -152,10 +141,6 @@ def search_papers(
         topic=topic,
         author=author,
     )
-
-    # --------------------------------------------------------
-    # Response
-    # --------------------------------------------------------
 
     return {
         "page": page,
@@ -189,3 +174,102 @@ def get_paper_by_id(
         return None
 
     return _paper_detail_to_response(paper)
+
+
+# ============================================================
+# Get Paper Collection
+# ============================================================
+
+def get_paper_collection(
+    db: Session,
+    paper_ids: list[int],
+) -> dict:
+    """
+    Fetch multiple papers by their IDs.
+
+    This operation is read-only. POST is used at the API
+    layer so a potentially large collection of IDs does not
+    need to be exposed in the URL.
+    """
+
+    # --------------------------------------------------------
+    # Remove duplicates while preserving requested order
+    # --------------------------------------------------------
+
+    unique_ids = list(
+        dict.fromkeys(paper_ids)
+    )
+
+    if not unique_ids:
+        return {
+            "count": 0,
+            "requested_count": 0,
+            "results": [],
+        }
+
+    # --------------------------------------------------------
+    # Fetch papers
+    # --------------------------------------------------------
+
+    papers = find_papers_by_ids(
+        db=db,
+        paper_ids=unique_ids,
+    )
+
+    # --------------------------------------------------------
+    # Map database results by ID
+    # --------------------------------------------------------
+
+    papers_by_id = {
+        paper.id: paper
+        for paper in papers
+    }
+
+    # --------------------------------------------------------
+    # Preserve requested ID order
+    # --------------------------------------------------------
+
+    results = []
+
+    for paper_id in unique_ids:
+        paper = papers_by_id.get(paper_id)
+
+        if paper is not None:
+            results.append(
+                _paper_detail_to_response(
+                    paper
+                )
+            )
+
+    return {
+        "count": len(results),
+        "requested_count": len(unique_ids),
+        "results": results,
+    }
+
+# ============================================================
+# Get Paper Collection
+# ============================================================
+
+def get_papers_by_ids(
+    db: Session,
+    paper_ids: list[int],
+) -> list[dict]:
+    """
+    Fetch multiple papers by their database IDs.
+
+    Read-only operation.
+    """
+
+    if not paper_ids:
+        return []
+
+    papers = find_papers_by_ids(
+        db=db,
+        paper_ids=paper_ids,
+    )
+
+    return [
+        _paper_detail_to_response(paper)
+        for paper in papers
+    ]
