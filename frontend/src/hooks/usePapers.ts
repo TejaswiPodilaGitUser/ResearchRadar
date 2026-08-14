@@ -11,29 +11,50 @@ import type {
   PaperSearchParams,
 } from "../types/paper";
 
+// ============================================================
+// Types
+// ============================================================
+
 interface UsePapersResult {
   data: PaginatedPaperResponse | null;
   loading: boolean;
   error: string | null;
-  refetch: () => void;
+  refetch: () => Promise<void>;
 }
 
+// ============================================================
+// Hook
+// ============================================================
+
 export function usePapers(
-  params: PaperSearchParams
+  params: PaperSearchParams,
+  enabled = true,
 ): UsePapersResult {
   const [data, setData] =
-    useState<PaginatedPaperResponse | null>(
-      null
-    );
+    useState<PaginatedPaperResponse | null>(null);
 
   const [loading, setLoading] =
-    useState<boolean>(false);
+    useState(false);
 
   const [error, setError] =
     useState<string | null>(null);
 
-  const fetchPapers = useCallback(
-    async () => {
+  // ==========================================================
+  // Fetch papers
+  // ==========================================================
+
+  const fetchPapers =
+    useCallback(async (): Promise<void> => {
+
+      // --------------------------------------------------------
+      // IMPORTANT:
+      // Do not call API when search is disabled.
+      // --------------------------------------------------------
+
+      if (!enabled) {
+        return;
+      }
+
       setLoading(true);
       setError(null);
 
@@ -42,39 +63,74 @@ export function usePapers(
           await paperApi.getPapers(params);
 
         setData(result);
+
       } catch (err) {
-        const message =
+        console.error(
+          "Failed to search papers:",
+          err,
+        );
+
+        setData(null);
+
+        setError(
           err instanceof Error
             ? err.message
-            : "Unable to load papers.";
+            : "Unable to search papers.",
+        );
 
-        setError(message);
       } finally {
         setLoading(false);
       }
-    },
-    [
+
+    }, [
+      enabled,
       params.page,
       params.size,
       params.keyword,
+      params.paper_id,
       params.year,
       params.topic,
       params.author,
-    ]
-  );
+    ]);
+
+  // ==========================================================
+  // Automatic fetch
+  // ==========================================================
+  //
+  // The hook fetches ONLY when enabled=true.
+  //
+  // SearchPage should pass:
+  //
+  // enabled =
+  //   hasSearched &&
+  //   searchMode === "exact"
+  //
+  // Therefore:
+  //
+  // Initial page -> NO API CALL
+  // Typing       -> NO API CALL
+  // Exact Search -> API CALL
+  // Similar      -> handled separately
+  // Smart        -> handled separately
+  //
+  // ==========================================================
 
   useEffect(() => {
-    // Only fetch if there's a search query or filter applied
-    const hasSearch =
-      params.keyword ||
-      params.year ||
-      params.topic ||
-      params.author;
 
-    if (hasSearch) {
-      void fetchPapers();
+    if (!enabled) {
+      return;
     }
-  }, [fetchPapers]);
+
+    void fetchPapers();
+
+  }, [
+    enabled,
+    fetchPapers,
+  ]);
+
+  // ==========================================================
+  // Return
+  // ==========================================================
 
   return {
     data,

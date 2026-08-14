@@ -15,7 +15,7 @@ export const SEARCH_CONFIG = {
   HYBRID_SEARCH_ENDPOINT: "/api/search/hybrid",
 
   // Year filter
-  YEARS_RANGE: 50,
+  YEARS_RANGE: 10,
   CURRENT_YEAR: new Date().getFullYear(),
 } as const;
 

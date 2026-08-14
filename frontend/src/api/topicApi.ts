@@ -1,29 +1,20 @@
 import { httpClient } from "./axiosClient";
 
-export interface Topic {
-  id: number;
-  name: string;
-}
-
-export interface TopicListResponse {
-  results: Topic[];
-  total: number;
-  page: number;
-  page_size: number;
-}
+import type {
+  MultipleTopicResponse,
+  PaginatedTopicResponse,
+  TopicDetail,
+  TopicSearchParams,
+} from "../types/topic";
 
 /**
  * Retrieve paginated topics.
  */
 export async function getTopics(
-  params: {
-    page?: number;
-    size?: number;
-    name?: string;
-  } = {},
-): Promise<TopicListResponse> {
+  params: TopicSearchParams = {},
+): Promise<PaginatedTopicResponse> {
   const response =
-    await httpClient.get<TopicListResponse>(
+    await httpClient.get<PaginatedTopicResponse>(
       "/api/topics",
       {
         params,
@@ -38,16 +29,79 @@ export async function getTopics(
  */
 export async function getTopicById(
   topicId: number,
-): Promise<Topic> {
+): Promise<TopicDetail> {
   const response =
-    await httpClient.get<Topic>(
+    await httpClient.get<TopicDetail>(
       `/api/topics/${topicId}`,
     );
 
   return response.data;
 }
 
+/**
+ * Retrieve a topic by exact name.
+ */
+export async function getTopicByName(
+  name: string,
+): Promise<TopicDetail> {
+  const response =
+    await httpClient.get<TopicDetail>(
+      "/api/topics/name",
+      {
+        params: {
+          name,
+        },
+      },
+    );
+
+  return response.data;
+}
+
+/**
+ * Retrieve multiple topics by IDs.
+ */
+export async function getMultipleTopicsByIds(
+  topicIds: number[],
+): Promise<MultipleTopicResponse> {
+  const response =
+    await httpClient.get<MultipleTopicResponse>(
+      "/api/topics/multiple/ids",
+      {
+        params: {
+          ids: topicIds.join(","),
+        },
+      },
+    );
+
+  return response.data;
+}
+
+/**
+ * Retrieve multiple topics by names.
+ */
+export async function getMultipleTopicsByNames(
+  topicNames: string[],
+): Promise<MultipleTopicResponse> {
+  const response =
+    await httpClient.get<MultipleTopicResponse>(
+      "/api/topics/multiple/names",
+      {
+        params: {
+          names: topicNames.join(","),
+        },
+      },
+    );
+
+  return response.data;
+}
+
+/**
+ * Topic API.
+ */
 export const topicApi = {
   getTopics,
   getTopicById,
+  getTopicByName,
+  getMultipleTopicsByIds,
+  getMultipleTopicsByNames,
 };

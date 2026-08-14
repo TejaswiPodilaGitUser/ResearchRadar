@@ -488,7 +488,7 @@ function AuthorsPage() {
       <section className="entity-hero">
 
         <div className="entity-eyebrow">
-          RESEARCHERS
+          RESEARCHER DISCOVERY
         </div>
 
         <h1>
@@ -496,9 +496,8 @@ function AuthorsPage() {
         </h1>
 
         <p>
-          Find researchers by name or
-          author ID and explore their
-          research papers.
+          Explore Researchers & Their Work.<br></br>
+          Find researchers by author name or ID and explore their research papers.
         </p>
 
       </section>

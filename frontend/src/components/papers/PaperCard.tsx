@@ -19,7 +19,20 @@ function PaperCard({
         {paper.paper_name}
       </h3>
 
+      {paper.authors && paper.authors.length > 0 && (
+        <p className="paper-authors">
+          Authors:{" "}
+          {paper.authors
+            .map((author) => author.author_name)
+            .join(", ")}
+        </p>
+      )}
+
       <div className="paper-meta">
+        <span>
+          Paper ID: {paper.paper_id}
+        </span>
+
         {paper.publication_year !== null &&
           paper.publication_year !== undefined && (
             <span>
@@ -29,7 +42,7 @@ function PaperCard({
 
         {paper.cited_by_count !== null &&
           paper.cited_by_count !== undefined && (
-            <span className="citation-badge">
+            <span>
               Citations: {paper.cited_by_count}
             </span>
           )}

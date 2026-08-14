@@ -1,53 +1,82 @@
-export interface PaperAuthor {
-  readonly author_id: number;
-  readonly author_name: string;
+// ============================================================
+// Paper Types
+// ============================================================
+
+export interface Author {
+  author_id: number;
+  author_name: string;
 }
 
-export interface PaperTopic {
-  readonly topic_id: number;
-  readonly topic_name: string;
+export interface Topic {
+  topic_id: number;
+  topic_name: string;
 }
+
+
+// ============================================================
+// Paper List Item
+// ============================================================
 
 export interface PaperListItem {
-  readonly paper_id: number;
-  readonly paper_name: string;
-  readonly abstract?: string | null;
-  readonly publication_year?: number | null;
-  readonly publication_date?: string | null;
-  readonly doi?: string | null;
-  readonly cited_by_count?: number | null;
-  readonly authors?: readonly PaperAuthor[];
-  readonly topics?: readonly PaperTopic[];
+  paper_id: number;
+  paper_name: string;
+  publication_year: number | null;
+  cited_by_count: number | null;
+  abstract?: string | null;
+  authors: Author[];
 }
+
+
+// ============================================================
+// Paper Detail
+// ============================================================
 
 export interface PaperDetail extends PaperListItem {
-  readonly embedding?: readonly number[] | null;
+  doi?: string | null;
+  topics?: Topic[];
 }
+
+
+// ============================================================
+// Search Parameters
+// ============================================================
 
 export interface PaperSearchParams {
-  readonly page?: number;
-  readonly size?: number;
-  readonly keyword?: string;
-  readonly year?: number;
-  readonly topic?: string;
-  readonly author?: string;
+  page?: number;
+  size?: number;
+
+  paper_id?: number;
+  paper_ids?: number[];
+
+  keyword?: string;
+
+  paper_name?: string;
+  paper_names?: string[];
+
+  year?: number;
+  topic?: string;
+  author?: string;
 }
+
+
+// ============================================================
+// Paginated Response
+// ============================================================
 
 export interface PaginatedPaperResponse {
-  readonly items: readonly PaperListItem[];
-  readonly total: number;
-  readonly page: number;
-  readonly size: number;
-  readonly pages: number;
-
-  // Backwards-compatible fields used by older frontend code
-  readonly results: readonly PaperListItem[];
-  readonly page_size: number;
+  page: number;
+  page_size: number;
+  total: number;
+  results: PaperListItem[];
 }
 
-// Backwards-compatible aliases
-export type Author = PaperAuthor;
-export type Topic = PaperTopic;
-export type PaperListResponse = PaperListItem;
-export type PaperList = PaperListItem;
-export type PaperDetailResponse = PaperDetail;
+
+// ============================================================
+// Collection Response
+// ============================================================
+
+export interface PaperCollectionResponse {
+  results: PaperDetail[];
+  requested_count: number;
+  returned_count: number;
+}

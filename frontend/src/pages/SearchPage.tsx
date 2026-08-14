@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 
 import SearchBar from "../components/search/SearchBar";
 import SearchFilters from "../components/search/SearchFilters";
-import SearchTabs from "../components/search/SearchTabs";
 import PaperList from "../components/papers/PaperList";
 
 import { LoadingState } from "../components/common/LoadingState";
@@ -12,8 +11,7 @@ import { EmptyState } from "../components/common/EmptyState";
 import { Pagination } from "../components/common/Pagination";
 
 import { usePapers } from "../hooks/usePapers";
-import { useDebounce } from "../hooks/useDebounce";
-
+import { paperApi } from "../api/paperApi";
 import { searchApi } from "../api/searchApi";
 
 import {
@@ -22,6 +20,7 @@ import {
 } from "../config/search";
 
 import type {
+  PaperDetail,
   PaperListItem,
   PaperSearchParams,
 } from "../types/paper";
@@ -37,344 +36,155 @@ type SearchMode =
   | "semantic"
   | "hybrid";
 
-type SearchTab =
-  | "papers"
-  | "authors"
-  | "topics";
-
 // ============================================================
-// Helper Functions
+// Helpers
 // ============================================================
 
-function getResultsTitle(
-  hasSearch: boolean,
-  searchMode: SearchMode,
-): string {
-  if (!hasSearch) {
-    return "Research Papers";
-  }
-
-  if (searchMode === "semantic") {
-    return "Similar Papers";
-  }
-
-  if (searchMode === "hybrid") {
-    return "Smart Search Results";
-  }
-
-  return "Search Results";
+function isNumericIdList(value: string): boolean {
+  return /^\d+(?:\s*,\s*\d+)*$/.test(value);
 }
 
-function getLoadingMessage(
-  searchMode: SearchMode,
-): string {
-  if (searchMode === "semantic") {
-    return "Finding similar papers...";
-  }
-
-  if (searchMode === "hybrid") {
-    return "Finding the best matches...";
-  }
-
-  return "Searching research papers...";
+function parsePaperIds(value: string): number[] {
+  return [
+    ...new Set(
+      value
+        .split(",")
+        .map((item) => Number(item.trim()))
+        .filter(
+          (id) =>
+            Number.isInteger(id) &&
+            id > 0,
+        ),
+    ),
+  ];
 }
 
-function getEmptyMessage(
-  isAiSearch: boolean,
-): string {
-  if (isAiSearch) {
-    return "Try another research question or search phrase.";
-  }
-
-  return "Try a different keyword, topic, author, or publication year.";
+function isPaperNameList(value: string): boolean {
+  return value.includes(",");
 }
 
-function getSearchPlaceholder(
-  activeTab: SearchTab,
-): string {
-  if (activeTab === "authors") {
-    return "Search by author name or author ID...";
-  }
-
-  if (activeTab === "topics") {
-    return "Search by topic name or topic ID...";
-  }
-
-  return "Search by title, paper ID, author, topic, keywords, or research concepts...";
+function parsePaperNames(value: string): string[] {
+  return [
+    ...new Set(
+      value
+        .split(",")
+        .map((name) => name.trim())
+        .filter(Boolean),
+    ),
+  ];
 }
 
-function getTabResultsTitle(
-  activeTab: SearchTab,
-): string {
-  if (activeTab === "authors") {
-    return "Authors";
-  }
-
-  if (activeTab === "topics") {
-    return "Topics";
-  }
-
-  return "Research Papers";
+function paperDetailToListItem(
+  paper: PaperDetail,
+): PaperListItem {
+  return paper as PaperListItem;
 }
 
 // ============================================================
 // Search Page
 // ============================================================
 
-export function SearchPage() {
+function SearchPage() {
   const navigate = useNavigate();
 
-  // ----------------------------------------------------------
+  // ==========================================================
   // Search state
-  // ----------------------------------------------------------
-
-  const [activeTab, setActiveTab] =
-    useState<SearchTab>("papers");
+  // ==========================================================
 
   const [keyword, setKeyword] = useState("");
 
   const [year, setYear] =
-    useState<number | undefined>(undefined);
+    useState<number | undefined>();
 
-  const [topic, setTopic] = useState("");
+  const [topic, setTopic] =
+    useState("");
 
-  const [author, setAuthor] = useState("");
+  const [author, setAuthor] =
+    useState("");
 
   const [page, setPage] = useState(1);
 
   const [searchMode, setSearchMode] =
     useState<SearchMode>("keyword");
 
-  // ----------------------------------------------------------
-  // AI search state
-  // ----------------------------------------------------------
-
-  const [aiResults, setAiResults] =
-    useState<PaperListItem[] | null>(null);
-
-  const [aiLoading, setAiLoading] =
+  /*
+   * Search is disabled initially.
+   *
+   * Therefore the page does NOT fetch
+   * /api/papers on initial load.
+   */
+  const [hasSearched, setHasSearched] =
     useState(false);
 
-  const [aiError, setAiError] =
+  // ==========================================================
+  // Search results
+  // ==========================================================
+
+  const [searchResults, setSearchResults] =
+    useState<PaperListItem[] | null>(null);
+
+  const [searchLoading, setSearchLoading] =
+    useState(false);
+
+  const [searchError, setSearchError] =
     useState<string | null>(null);
 
-  // ----------------------------------------------------------
-  // Debounced values
-  // ----------------------------------------------------------
+  // ==========================================================
+  // Exact / keyword search parameters
+  // ==========================================================
 
-  const debouncedKeyword = useDebounce(
-    keyword,
-    SEARCH_CONFIG.DEBOUNCE_DELAY,
-  );
+  /*
+   * Normal keyword/filter searches still use usePapers.
+   *
+   * ID and paper-name searches are handled separately
+   * by handleSearch().
+   */
+  const searchParams =
+    useMemo<PaperSearchParams>(() => {
+      return {
+        page,
+        size: SEARCH_CONFIG.PAGE_SIZE,
 
-  const debouncedTopic = useDebounce(
-    topic,
-    SEARCH_CONFIG.DEBOUNCE_DELAY,
-  );
+        keyword:
+          keyword.trim() || undefined,
 
-  const debouncedAuthor = useDebounce(
-    author,
-    SEARCH_CONFIG.DEBOUNCE_DELAY,
-  );
+        year:
+          year ?? undefined,
 
-  // ----------------------------------------------------------
-  // Normal paper search parameters
-  // ----------------------------------------------------------
+        topic:
+          topic.trim() || undefined,
 
-  const searchParams = useMemo<PaperSearchParams>(
-    () => ({
+        author:
+          author.trim() || undefined,
+      };
+    }, [
       page,
-      size: SEARCH_CONFIG.PAGE_SIZE,
-
-      keyword:
-        debouncedKeyword.trim() || undefined,
-
-      topic:
-        debouncedTopic.trim() || undefined,
-
-      author:
-        debouncedAuthor.trim() || undefined,
-
-      year: year || undefined,
-    }),
-    [
-      page,
-      debouncedKeyword,
-      debouncedTopic,
-      debouncedAuthor,
+      keyword,
       year,
-    ],
-  );
+      topic,
+      author,
+    ]);
 
-  // ----------------------------------------------------------
-  // Normal paper search
-  // ----------------------------------------------------------
+  // ==========================================================
+  // Normal keyword search
+  // ==========================================================
 
   const {
     data,
     loading: papersLoading,
     error: papersError,
     refetch,
-  } = usePapers(searchParams);
+  } = usePapers(
+    searchParams,
+    hasSearched &&
+      searchMode === "keyword" &&
+      !isNumericIdList(keyword.trim()) &&
+      !isPaperNameList(keyword.trim()),
+  );
 
-  // ----------------------------------------------------------
-  // Search mode
-  // ----------------------------------------------------------
-
-  const isAiSearch =
-    searchMode === "semantic" ||
-    searchMode === "hybrid";
-
-  // ----------------------------------------------------------
-  // Execute AI search
-  // ----------------------------------------------------------
-
-  const executeAiSearch = async (
-    mode: SearchMode,
-  ): Promise<void> => {
-    const query = keyword.trim();
-
-    if (!query || mode === "keyword") {
-      setAiResults(null);
-      return;
-    }
-
-    setAiLoading(true);
-    setAiError(null);
-
-    try {
-      let results: PaperListItem[];
-
-      if (mode === "semantic") {
-        results =
-          await searchApi.semanticSearch({
-            query,
-            limit:
-              SEARCH_CONFIG.MAX_SEARCH_RESULTS,
-          });
-      } else {
-        results =
-          await searchApi.hybridSearch({
-            query,
-            limit:
-              SEARCH_CONFIG.MAX_SEARCH_RESULTS,
-          });
-      }
-
-      setAiResults(results);
-    } catch (error) {
-      console.error(
-        `Failed to perform ${mode} search`,
-        error,
-      );
-
-      setAiError(
-        "Unable to perform this search. Please try again.",
-      );
-
-      setAiResults(null);
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
-  // ----------------------------------------------------------
-  // Handlers
-  // ----------------------------------------------------------
-
-  const handleTabChange = (
-    tab: SearchTab,
-  ): void => {
-    setActiveTab(tab);
-
-    setKeyword("");
-    setPage(1);
-
-    setAiResults(null);
-    setAiError(null);
-
-    /*
-     * Search filters belong to the Papers
-     * tab only. They are intentionally kept
-     * separate from Author and Topic search.
-     */
-    if (tab !== "papers") {
-      setYear(undefined);
-      setTopic("");
-      setAuthor("");
-    }
-  };
-
-  const handleKeywordChange = (
-    value: string,
-  ): void => {
-    setKeyword(value);
-    setPage(1);
-
-    if (!value.trim()) {
-      setAiResults(null);
-      setAiError(null);
-    }
-  };
-
-  const handleSearchModeChange = (
-    mode: SearchMode,
-  ): void => {
-    setSearchMode(mode);
-    setPage(1);
-
-    setAiResults(null);
-    setAiError(null);
-
-    if (
-      mode !== "keyword" &&
-      keyword.trim()
-    ) {
-      void executeAiSearch(mode);
-    }
-  };
-
-  const handleYearChange = (
-    value?: number,
-  ): void => {
-    setYear(value);
-    setPage(1);
-  };
-
-  const handleTopicChange = (
-    value: string,
-  ): void => {
-    setTopic(value);
-    setPage(1);
-  };
-
-  const handleAuthorChange = (
-    value: string,
-  ): void => {
-    setAuthor(value);
-    setPage(1);
-  };
-
-  const handleClearFilters = (): void => {
-    setKeyword("");
-    setYear(undefined);
-    setTopic("");
-    setAuthor("");
-    setPage(1);
-
-    setAiResults(null);
-    setAiError(null);
-  };
-
-  const handlePaperSelect = (
-    paperId: number,
-  ): void => {
-    navigate(`/papers/${paperId}`);
-  };
-
-  // ----------------------------------------------------------
-  // Available years
-  // ----------------------------------------------------------
+  // ==========================================================
+  // Years
+  // ==========================================================
 
   const years = useMemo(
     () =>
@@ -385,70 +195,577 @@ export function SearchPage() {
     [],
   );
 
-  // ----------------------------------------------------------
-  // Search state
-  // ----------------------------------------------------------
+  // ==========================================================
+  // Search mode
+  // ==========================================================
+
+  const isAiSearch =
+    searchMode === "semantic" ||
+    searchMode === "hybrid";
+
+  // ==========================================================
+  // Execute ID / Name / AI Search
+  // ==========================================================
+
+  const executeSearch =
+    async (): Promise<void> => {
+      const value = keyword.trim();
+
+      if (!value) {
+        setSearchResults(null);
+        setSearchError(
+          "Please enter a Paper ID, paper name, keyword, or research concept.",
+        );
+        return;
+      }
+
+      setSearchLoading(true);
+      setSearchError(null);
+      setSearchResults(null);
+
+      try {
+        // ======================================================
+        // PAPER ID SEARCH
+        // ======================================================
+
+        if (
+          searchMode === "keyword" &&
+          isNumericIdList(value)
+        ) {
+          const ids =
+            parsePaperIds(value);
+
+          if (ids.length === 0) {
+            throw new Error(
+              "Please enter a valid Paper ID.",
+            );
+          }
+
+          let results: PaperListItem[] = [];
+
+          // ----------------------------------------------------
+          // Single ID
+          // ----------------------------------------------------
+
+          if (ids.length === 1) {
+            const paper =
+              await paperApi.getPaperById(
+                ids[0],
+              );
+
+            results = [
+              paperDetailToListItem(
+                paper,
+              ),
+            ];
+          }
+
+          // ----------------------------------------------------
+          // Multiple IDs
+          // ----------------------------------------------------
+
+          else {
+            const response =
+              await paperApi.getPapersByIds(
+                ids,
+              );
+
+            results =
+              response.results ?? [];
+          }
+
+          setSearchResults(results);
+          return;
+        }
+
+        // ======================================================
+        // PAPER NAME SEARCH
+        // ======================================================
+
+        if (
+          searchMode === "keyword" &&
+          isPaperNameList(value)
+        ) {
+          const names =
+            parsePaperNames(value);
+
+          if (names.length === 0) {
+            throw new Error(
+              "Please enter a valid paper name.",
+            );
+          }
+
+          let results: PaperListItem[] = [];
+
+          // ----------------------------------------------------
+          // Single name
+          // ----------------------------------------------------
+
+          if (names.length === 1) {
+            const paper =
+              await paperApi.getPaperByName(
+                names[0],
+              );
+
+            results = [
+              paperDetailToListItem(
+                paper,
+              ),
+            ];
+          }
+
+          // ----------------------------------------------------
+          // Multiple names
+          // ----------------------------------------------------
+
+          else {
+            const response =
+              await paperApi.getPapersByNames(
+                names,
+              );
+
+            results =
+              response.results ?? [];
+          }
+
+          setSearchResults(results);
+          return;
+        }
+
+        // ======================================================
+        // SEMANTIC SEARCH
+        // ======================================================
+
+        if (searchMode === "semantic") {
+          const results =
+            await searchApi.semanticSearch({
+              query: value,
+              limit:
+                SEARCH_CONFIG.MAX_SEARCH_RESULTS,
+            });
+
+          setSearchResults(
+            Array.isArray(results)
+              ? results
+              : [],
+          );
+
+          return;
+        }
+
+        // ======================================================
+        // HYBRID / SMART SEARCH
+        // ======================================================
+
+        if (searchMode === "hybrid") {
+          const results =
+            await searchApi.hybridSearch({
+              query: value,
+              limit:
+                SEARCH_CONFIG.MAX_SEARCH_RESULTS,
+            });
+
+          setSearchResults(
+            Array.isArray(results)
+              ? results
+              : [],
+          );
+
+          return;
+        }
+
+        // ======================================================
+        // NORMAL KEYWORD SEARCH
+        // ======================================================
+
+        /*
+         * Normal keyword search is performed by usePapers.
+         *
+         * Nothing is required here.
+         */
+      } catch (error) {
+        console.error(
+          "Search failed:",
+          error,
+        );
+
+        setSearchResults(null);
+
+        setSearchError(
+          error instanceof Error
+            ? error.message
+            : "Unable to perform the search. Please try again.",
+        );
+      } finally {
+        setSearchLoading(false);
+      }
+    };
+
+  // ==========================================================
+  // Search
+  // ==========================================================
+
+  const handleSearch = (): void => {
+    const value = keyword.trim();
+
+    if (!value) {
+      setHasSearched(false);
+      setSearchResults(null);
+
+      setSearchError(
+        "Please enter a Paper ID, paper name, keyword, or research concept.",
+      );
+
+      return;
+    }
+
+    // --------------------------------------------------------
+    // Reset previous state
+    // --------------------------------------------------------
+
+    setPage(1);
+    setSearchError(null);
+    setSearchResults(null);
+
+    // --------------------------------------------------------
+    // Enable search
+    // --------------------------------------------------------
+
+    setHasSearched(true);
+
+    // --------------------------------------------------------
+    // ID / Name / AI searches
+    // --------------------------------------------------------
+
+    if (
+      searchMode === "semantic" ||
+      searchMode === "hybrid" ||
+      isNumericIdList(value) ||
+      isPaperNameList(value)
+    ) {
+      void executeSearch();
+    }
+
+    // --------------------------------------------------------
+    // Normal keyword search
+    // --------------------------------------------------------
+
+    /*
+     * usePapers automatically executes because:
+     *
+     * hasSearched = true
+     *
+     * and its enabled flag becomes true.
+     */
+  };
+
+  // ==========================================================
+  // Search Mode Change
+  // ==========================================================
+
+  const handleSearchModeChange = (
+    mode: SearchMode,
+  ): void => {
+    setSearchMode(mode);
+
+    setHasSearched(false);
+
+    setSearchResults(null);
+    setSearchError(null);
+
+    setPage(1);
+  };
+
+  // ==========================================================
+  // Keyword Change
+  // ==========================================================
+
+  const handleKeywordChange = (
+    value: string,
+  ): void => {
+    setKeyword(value);
+
+    /*
+     * User must press Search again.
+     */
+    setHasSearched(false);
+
+    setSearchResults(null);
+    setSearchError(null);
+
+    setPage(1);
+  };
+
+  // ==========================================================
+  // Year Change
+  // ==========================================================
+
+  const handleYearChange = (
+    value?: number,
+  ): void => {
+    setYear(value);
+
+    setHasSearched(false);
+
+    setSearchResults(null);
+    setSearchError(null);
+
+    setPage(1);
+  };
+
+  // ==========================================================
+  // Topic Change
+  // ==========================================================
+
+  const handleTopicChange = (
+    value: string,
+  ): void => {
+    setTopic(value);
+
+    setHasSearched(false);
+
+    setSearchResults(null);
+    setSearchError(null);
+
+    setPage(1);
+  };
+
+  // ==========================================================
+  // Author Change
+  // ==========================================================
+
+  const handleAuthorChange = (
+    value: string,
+  ): void => {
+    setAuthor(value);
+
+    setHasSearched(false);
+
+    setSearchResults(null);
+    setSearchError(null);
+
+    setPage(1);
+  };
+
+  // ==========================================================
+  // Clear Search
+  // ==========================================================
+
+  const handleClearSearch =
+    (): void => {
+      setKeyword("");
+
+      setYear(undefined);
+
+      setTopic("");
+
+      setAuthor("");
+
+      setPage(1);
+
+      setHasSearched(false);
+
+      setSearchResults(null);
+
+      setSearchError(null);
+    };
+
+  // ==========================================================
+  // Paper Selection
+  // ==========================================================
+
+  const handlePaperSelect = (
+    paperId: number,
+  ): void => {
+    navigate(
+      `/papers/${paperId}`,
+    );
+  };
+
+  // ==========================================================
+  // Search State
+  // ==========================================================
+
+  const hasFilters =
+    year !== undefined ||
+    Boolean(topic.trim()) ||
+    Boolean(author.trim());
+
+  const hasSearchInput =
+    Boolean(keyword.trim()) ||
+    hasFilters;
 
   const activeFilterCount =
-    Number(Boolean(year)) +
+    Number(year !== undefined) +
     Number(Boolean(topic.trim())) +
     Number(Boolean(author.trim()));
 
-  const hasSearch =
-    Boolean(keyword.trim()) ||
-    Boolean(topic.trim()) ||
-    Boolean(author.trim()) ||
-    Boolean(year);
+  // ==========================================================
+  // Determine Special Search
+  // ==========================================================
 
-  // ----------------------------------------------------------
-  // Current results
-  // ----------------------------------------------------------
+  const isSpecialKeywordSearch =
+    searchMode === "keyword" &&
+    (
+      isNumericIdList(
+        keyword.trim(),
+      ) ||
+      isPaperNameList(
+        keyword.trim(),
+      )
+    );
 
-  const currentResults = isAiSearch
-    ? aiResults ?? []
-    : data?.results ?? [];
+  // ==========================================================
+  // Current Loading State
+  // ==========================================================
 
-  const totalResults = isAiSearch
-    ? currentResults.length
-    : data?.total ?? 0;
+  const loading =
+    isAiSearch ||
+    isSpecialKeywordSearch
+      ? searchLoading
+      : papersLoading;
 
-  const isLoading = isAiSearch
-    ? aiLoading
-    : papersLoading;
+  // ==========================================================
+  // Current Error
+  // ==========================================================
 
-  const currentError = isAiSearch
-    ? aiError
-    : papersError;
+  const error =
+    searchError ??
+    (
+      isAiSearch ||
+      isSpecialKeywordSearch
+        ? null
+        : papersError
+    );
 
-  const resultsTitle =
-    activeTab === "papers"
-      ? getResultsTitle(
-          hasSearch,
-          searchMode,
+  // ==========================================================
+  // Current Results
+  // ==========================================================
+
+  const results =
+    isAiSearch ||
+    isSpecialKeywordSearch
+      ? searchResults ?? []
+      : data?.results ?? [];
+
+  // ==========================================================
+  // Total
+  // ==========================================================
+
+  const total =
+    isAiSearch ||
+    isSpecialKeywordSearch
+      ? results.length
+      : data?.total ?? 0;
+
+  // ==========================================================
+  // Results Title
+  // ==========================================================
+
+  const getResultsTitle =
+    (): string => {
+      if (
+        searchMode === "semantic"
+      ) {
+        return "Similar Papers";
+      }
+
+      if (
+        searchMode === "hybrid"
+      ) {
+        return "Smart Search Results";
+      }
+
+      if (
+        isNumericIdList(
+          keyword.trim(),
         )
-      : getTabResultsTitle(activeTab);
+      ) {
+        return "Paper ID Results";
+      }
 
-  const loadingMessage =
-    getLoadingMessage(searchMode);
+      if (
+        isPaperNameList(
+          keyword.trim(),
+        )
+      ) {
+        return "Paper Name Results";
+      }
 
-  const emptyMessage =
-    getEmptyMessage(isAiSearch);
+      return "Exact Search Results";
+    };
 
-  const searchPlaceholder =
-    getSearchPlaceholder(activeTab);
+  // ==========================================================
+  // Loading Message
+  // ==========================================================
 
-  // ----------------------------------------------------------
+  const getLoadingMessage =
+    (): string => {
+      if (
+        searchMode === "semantic"
+      ) {
+        return "Finding similar papers...";
+      }
+
+      if (
+        searchMode === "hybrid"
+      ) {
+        return "Finding the best matches...";
+      }
+
+      return "Searching research papers...";
+    };
+
+  // ==========================================================
+  // Empty Message
+  // ==========================================================
+
+  const getEmptyMessage =
+    (): string => {
+      if (
+        searchMode === "semantic"
+      ) {
+        return "No similar papers were found. Try another research concept.";
+      }
+
+      if (
+        searchMode === "hybrid"
+      ) {
+        return "No relevant papers were found. Try changing your search.";
+      }
+
+      if (
+        isNumericIdList(
+          keyword.trim(),
+        )
+      ) {
+        return "No papers were found for the specified Paper ID(s).";
+      }
+
+      if (
+        isPaperNameList(
+          keyword.trim(),
+        )
+      ) {
+        return "No papers were found for the specified paper name(s).";
+      }
+
+      return "No papers matched your search. Try another title, keyword, author, topic, or year.";
+    };
+
+  // ==========================================================
   // Render
-  // ----------------------------------------------------------
+  // ==========================================================
 
   return (
     <main className="search-page">
 
-      {/* ======================================================
+      {/* ====================================================
           Hero
-          ====================================================== */}
+          ==================================================== */}
 
       <section className="search-hero">
+
         <div className="search-hero-content">
 
           <div className="search-eyebrow">
@@ -456,316 +773,266 @@ export function SearchPage() {
           </div>
 
           <h1>
-            Discover Research.
-            <br />
-            Explore Ideas.
+            Research Papers
           </h1>
 
           <p>
-            Search and explore research papers,
-            authors, and topics across the
-            Research Radar corpus.
+            Search and explore research
+            papers across the Research
+            Radar corpus.
           </p>
 
         </div>
+
       </section>
 
-      {/* ======================================================
-          Search Area
-          ====================================================== */}
+      {/* ====================================================
+          Search
+          ==================================================== */}
 
       <section className="search-area">
 
         <div className="search-panel">
 
-          {/* --------------------------------------------------
+          {/* ------------------------------------------------
               Header
-              -------------------------------------------------- */}
+              ------------------------------------------------ */}
 
           <div className="search-panel-header">
 
             <div>
+
               <h2>
-                Search Research
+                Search Research Papers
               </h2>
 
               <p>
-                Search by title, paper ID,
-                author, topic, keywords,
-                or research concepts.
+                Search by Paper ID,
+                paper name, title,
+                abstract, topic,
+                author, or year.
               </p>
+
             </div>
 
-            {activeFilterCount > 0 &&
-              activeTab === "papers" && (
-                <span className="filter-count">
-                  {activeFilterCount}{" "}
-                  {activeFilterCount === 1
-                    ? "filter"
-                    : "filters"}{" "}
-                  applied
-                </span>
-              )}
+            {activeFilterCount > 0 && (
+              <span className="filter-count">
+
+                {activeFilterCount}{" "}
+
+                {activeFilterCount === 1
+                  ? "filter"
+                  : "filters"}{" "}
+
+                applied
+
+              </span>
+            )}
 
           </div>
 
-          {/* --------------------------------------------------
-              Main Search Tabs
-              -------------------------------------------------- */}
+          {/* ------------------------------------------------
+              Search Bar
+              ------------------------------------------------ */}
 
-          <SearchTabs
-            activeTab={activeTab}
-            onTabChange={handleTabChange}
-          />
+          <div className="search-input-wrapper">
 
-          {/* ==================================================
-              PAPERS SEARCH
-              ================================================== */}
+            <SearchBar
+              value={keyword}
+              onChange={
+                handleKeywordChange
+              }
+              placeholder="Search by Paper ID, paper name, keywords, or research concepts..."
+              searchMode={searchMode}
+              onSearchModeChange={
+                handleSearchModeChange
+              }
+            />
 
-          {activeTab === "papers" && (
-            <>
-              <div className="search-input-wrapper">
+            <button
+              type="button"
+              className="search-button"
+              onClick={handleSearch}
+            >
+              Search
+            </button>
 
-                <SearchBar
-                  value={keyword}
-                  onChange={
-                    handleKeywordChange
-                  }
-                  searchMode={
-                    searchMode
-                  }
-                  onSearchModeChange={
-                    handleSearchModeChange
-                  }
-                  placeholder={
-                    searchPlaceholder
-                  }
-                />
+          </div>
 
-              </div>
+          {/* ------------------------------------------------
+              Filters
+              ------------------------------------------------ */}
 
-              {/* ----------------------------------------------
-                  Paper Filters
-                  ---------------------------------------------- */}
+          <div className="filters-wrapper">
 
-              <div className="filters-wrapper">
+            <SearchFilters
+              year={year}
+              topic={topic}
+              author={author}
+              years={years}
+              onYearChange={
+                handleYearChange
+              }
+              onTopicChange={
+                handleTopicChange
+              }
+              onAuthorChange={
+                handleAuthorChange
+              }
+              onClear={
+                handleClearSearch
+              }
+            />
 
-                <SearchFilters
-                  year={year}
-                  topic={topic}
-                  author={author}
-                  years={years}
-                  onYearChange={
-                    handleYearChange
-                  }
-                  onTopicChange={
-                    handleTopicChange
-                  }
-                  onAuthorChange={
-                    handleAuthorChange
-                  }
-                  onClear={
-                    handleClearFilters
-                  }
-                />
-
-              </div>
-            </>
-          )}
-
-          {/* ==================================================
-              AUTHORS SEARCH
-              ================================================== */}
-
-          {activeTab === "authors" && (
-            <div className="entity-search-panel">
-
-              <div className="entity-search-info">
-                <span className="entity-search-icon">
-                  👤
-                </span>
-
-                <div>
-                  <h3>
-                    Search Authors
-                  </h3>
-
-                  <p>
-                    Find researchers by name
-                    or author identifier.
-                  </p>
-                </div>
-              </div>
-
-              <div className="entity-search-placeholder">
-                Author search API and results
-                will be connected here.
-              </div>
-
-            </div>
-          )}
-
-          {/* ==================================================
-              TOPICS SEARCH
-              ================================================== */}
-
-          {activeTab === "topics" && (
-            <div className="entity-search-panel">
-
-              <div className="entity-search-info">
-                <span className="entity-search-icon">
-                  🏷
-                </span>
-
-                <div>
-                  <h3>
-                    Search Topics
-                  </h3>
-
-                  <p>
-                    Find research topics by
-                    name or topic identifier.
-                  </p>
-                </div>
-              </div>
-
-              <div className="entity-search-placeholder">
-                Topic search API and results
-                will be connected here.
-              </div>
-
-            </div>
-          )}
+          </div>
 
         </div>
 
       </section>
 
-      {/* ======================================================
+      {/* ====================================================
           Results
-          ====================================================== */}
+          ==================================================== */}
 
       <section
         className="results-section"
-        aria-label="Search results"
+        aria-label="Research papers"
       >
 
-        {/* --------------------------------------------------
-            Results Header
-            -------------------------------------------------- */}
+        {/* ------------------------------------------------
+            Initial State
+            ------------------------------------------------ */}
 
-        {!isLoading &&
-          !currentError && (
+        {!hasSearched &&
+          !loading && (
+            <EmptyState
+              title="Start exploring research"
+              message="Enter a Paper ID, paper name, keyword, or research concept and choose a search type."
+            />
+          )}
+
+        {/* ------------------------------------------------
+            Results Header
+            ------------------------------------------------ */}
+
+        {hasSearched &&
+          !loading &&
+          !error && (
             <div className="results-header">
 
               <div>
 
                 <h2>
-                  {resultsTitle}
+                  {getResultsTitle()}
                 </h2>
 
                 <p className="results-description">
-                  {totalResults.toLocaleString()}{" "}
-                  {totalResults === 1
+
+                  {total.toLocaleString()}{" "}
+
+                  {total === 1
                     ? "paper"
                     : "papers"}{" "}
-                  available
+
+                  found
+
                 </p>
 
               </div>
 
-              {hasSearch &&
-                activeTab === "papers" && (
-                  <button
-                    type="button"
-                    className="clear-search-button"
-                    onClick={
-                      handleClearFilters
-                    }
-                  >
-                    Clear Search
-                  </button>
-                )}
+              {hasSearchInput && (
+                <button
+                  type="button"
+                  className="clear-search-button"
+                  onClick={
+                    handleClearSearch
+                  }
+                >
+                  Clear Search
+                </button>
+              )}
 
             </div>
           )}
 
-        {/* --------------------------------------------------
+        {/* ------------------------------------------------
             Loading
-            -------------------------------------------------- */}
+            ------------------------------------------------ */}
 
-        {isLoading && (
+        {loading && (
           <LoadingState
-            message={loadingMessage}
+            message={
+              getLoadingMessage()
+            }
           />
         )}
 
-        {/* --------------------------------------------------
+        {/* ------------------------------------------------
             Error
-            -------------------------------------------------- */}
+            ------------------------------------------------ */}
 
-        {!isLoading &&
-          currentError && (
+        {!loading &&
+          error && (
             <ErrorState
-              message={currentError}
+              message={error}
               onRetry={
-                isAiSearch
-                  ? () =>
-                      void executeAiSearch(
-                        searchMode,
-                      )
+                isAiSearch ||
+                isSpecialKeywordSearch
+                  ? executeSearch
                   : refetch
               }
             />
           )}
 
-        {/* --------------------------------------------------
-            Empty
-            -------------------------------------------------- */}
+        {/* ------------------------------------------------
+            No Results
+            ------------------------------------------------ */}
 
-        {!isLoading &&
-          !currentError &&
-          activeTab === "papers" &&
-          currentResults.length === 0 && (
+        {hasSearched &&
+          !loading &&
+          !error &&
+          results.length === 0 && (
             <EmptyState
               title="No papers found"
-              message={emptyMessage}
+              message={
+                getEmptyMessage()
+              }
             />
           )}
 
-        {/* --------------------------------------------------
-            Paper Results
-            -------------------------------------------------- */}
+        {/* ------------------------------------------------
+            Results
+            ------------------------------------------------ */}
 
-        {!isLoading &&
-          !currentError &&
-          activeTab === "papers" &&
-          currentResults.length > 0 && (
+        {!loading &&
+          !error &&
+          results.length > 0 && (
             <>
               <PaperList
-                papers={currentResults}
+                papers={results}
                 onPaperClick={
                   handlePaperSelect
                 }
               />
 
-              {!isAiSearch && (
-                <Pagination
-                  page={
-                    data?.page ?? 1
-                  }
-                  pageSize={
-                    data?.page_size ??
-                    SEARCH_CONFIG.PAGE_SIZE
-                  }
-                  total={
-                    data?.total ?? 0
-                  }
-                  onPageChange={
-                    setPage
-                  }
-                />
-              )}
+              {/* --------------------------------------------
+                  Pagination only for normal keyword search
+                  -------------------------------------------- */}
+
+              {!isAiSearch &&
+                !isSpecialKeywordSearch &&
+                data && (
+                  <Pagination
+                    page={data.page}
+                    pageSize={
+                      data.page_size
+                    }
+                    total={data.total}
+                    onPageChange={
+                      setPage
+                    }
+                  />
+                )}
             </>
           )}
 
@@ -776,4 +1043,3 @@ export function SearchPage() {
 }
 
 export default SearchPage;
-
