@@ -13,20 +13,26 @@ function PaperCard({
     onClick?.(paper.paper_id);
   };
 
+  const visibleAuthors = paper.authors?.slice(0, 6);
+  const hasMoreAuthors =
+    (paper.authors?.length ?? 0) > 6;
+
   return (
     <article className="paper-card">
       <h3 className="paper-title">
         {paper.paper_name}
       </h3>
 
-      {paper.authors && paper.authors.length > 0 && (
-        <p className="paper-authors">
-          Authors:{" "}
-          {paper.authors
-            .map((author) => author.author_name)
-            .join(", ")}
-        </p>
-      )}
+      {visibleAuthors &&
+        visibleAuthors.length > 0 && (
+          <p className="paper-authors">
+            Authors:{" "}
+            {visibleAuthors
+              .map((author) => author.author_name)
+              .join(", ")}
+            {hasMoreAuthors && "..."}
+          </p>
+        )}
 
       <div className="paper-meta">
         <span>

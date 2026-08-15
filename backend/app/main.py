@@ -31,6 +31,8 @@ from app.api.metrics import (
     router as metrics_router,
 )
 
+from fastapi.openapi.utils import get_openapi
+
 
 # ============================================================
 # FastAPI Application
@@ -124,8 +126,6 @@ app.include_router(
 )
 
 
-
-
 # ============================================================
 # Health Check
 # ============================================================
@@ -138,6 +138,71 @@ def health_check():
     """
     Application health check.
     """
+
     return {
         "status": "UP"
     }
+
+
+# ============================================================
+# Custom OpenAPI
+# ============================================================
+# This changes ONLY the Swagger/OpenAPI display order.
+#
+# Actual FastAPI route matching remains safe:
+#
+# /papers/name
+# /papers/collection/ids
+# /papers/collection/names
+# /papers/{paper_id}
+#
+# Therefore /papers/name will NOT produce a 422 error.
+# ============================================================
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+
+    desired_paper_order = [
+        "/api/papers",
+        "/api/papers/{paper_id}",
+        "/api/papers/name",
+        "/api/papers/collection/ids",
+        "/api/papers/collection/names",
+    ]
+
+    paths = openapi_schema.get("paths", {})
+
+    ordered_paths = {}
+
+    # --------------------------------------------------------
+    # Add Papers paths in desired Swagger order
+    # --------------------------------------------------------
+
+    for path in desired_paper_order:
+        if path in paths:
+            ordered_paths[path] = paths[path]
+
+    # --------------------------------------------------------
+    # Add all remaining API paths
+    # --------------------------------------------------------
+
+    for path, value in paths.items():
+        if path not in ordered_paths:
+            ordered_paths[path] = value
+
+    openapi_schema["paths"] = ordered_paths
+
+    app.openapi_schema = openapi_schema
+
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi

@@ -14,18 +14,21 @@ export function ErrorState({
       className="error-state"
       role="alert"
     >
-      <h2>{title}</h2>
+      <div className="error-state-content">
+        <h2>{title}</h2>
 
-      <p>{message}</p>
+        <p>{message}</p>
 
-      {onRetry !== undefined && (
-        <button
-          type="button"
-          onClick={onRetry}
-        >
-          Try Again
-        </button>
-      )}
+        {onRetry !== undefined && (
+          <button
+            type="button"
+            className="error-state-button"
+            onClick={onRetry}
+          >
+            Try Again
+          </button>
+        )}
+      </div>
     </section>
   );
 }

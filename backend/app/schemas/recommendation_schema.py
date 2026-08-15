@@ -1,6 +1,10 @@
 from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+)
 
 
 # ============================================================
@@ -69,6 +73,7 @@ class RecommendationListResponse(BaseModel):
 # ============================================================
 
 class TrendingPaperResponse(BaseModel):
+
     paper_id: int
     paper_name: str
 
@@ -77,4 +82,45 @@ class TrendingPaperResponse(BaseModel):
 
     model_config = ConfigDict(
         from_attributes=True
+    )
+
+
+# ============================================================
+# Emerging Topic
+# ============================================================
+
+class EmergingTopicResponse(BaseModel):
+
+    topic_id: int
+    topic_name: str
+
+    paper_count: int
+    recent_paper_count: int
+    citation_count: int
+
+    model_config = ConfigDict(
+        from_attributes=True
+    )
+
+
+# ============================================================
+# Topic Paper Pagination
+# ============================================================
+
+class TopicPaperPageResponse(BaseModel):
+
+    topic_id: int
+    topic_name: str
+
+    page: int
+    limit: int
+
+    total: int
+    total_pages: int
+
+    has_previous: bool
+    has_next: bool
+
+    results: List[RecommendationPaperResponse] = Field(
+        default_factory=list
     )

@@ -11,6 +11,12 @@ import LoadingState from "../components/common/LoadingState";
 import ErrorState from "../components/common/ErrorState";
 
 import "../styles/entity-page.css";
+import "../styles/author-page.css";
+
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
 
 function getInitials(
   name: string,
@@ -27,12 +33,15 @@ function getInitials(
   return parts
     .slice(0, 2)
     .map((part) =>
-      part
-        .charAt(0)
-        .toUpperCase(),
+      part.charAt(0).toUpperCase(),
     )
     .join("");
 }
+
+
+/* ============================================================
+   AUTHORS PAGE
+   ============================================================ */
 
 function AuthorsPage() {
   const navigate = useNavigate();
@@ -63,6 +72,11 @@ function AuthorsPage() {
     clearSelectedAuthor,
   } = useAuthors();
 
+
+  /* ==========================================================
+     SEARCH
+     ========================================================== */
+
   const handleSearch = (): void => {
     const keyword =
       search.trim();
@@ -80,19 +94,28 @@ function AuthorsPage() {
     );
   };
 
+
   const handleKeyDown = (
     event: KeyboardEvent<HTMLInputElement>,
   ): void => {
     if (event.key === "Enter") {
       event.preventDefault();
+
       handleSearch();
     }
   };
 
+
   const handleClear = (): void => {
     setSearch("");
+
     clearAuthors();
   };
+
+
+  /* ==========================================================
+     AUTHOR ACTIONS
+     ========================================================== */
 
   const handleAuthorClick = (
     authorId: number,
@@ -100,9 +123,15 @@ function AuthorsPage() {
     void loadAuthor(authorId);
   };
 
+
   const handleBack = (): void => {
     clearSelectedAuthor();
   };
+
+
+  /* ==========================================================
+     PAGINATION
+     ========================================================== */
 
   const totalPages =
     pageSize > 0
@@ -110,6 +139,7 @@ function AuthorsPage() {
           total / pageSize,
         )
       : 0;
+
 
   /*
    * ==========================================================
@@ -122,111 +152,87 @@ function AuthorsPage() {
       selectedAuthor.papers ?? [];
 
     return (
-      <main className="entity-page">
+      <main className="author-page">
 
-        <section className="entity-hero">
+        <div className="author-page-container">
 
-          <div className="entity-eyebrow">
-            RESEARCHER
-          </div>
+          {/* ==================================================
+              DETAIL HEADER
+              ================================================== */}
 
-          <h1>
-            {selectedAuthor.author_name}
-          </h1>
+          <section className="author-page-header">
 
-          <p>
-            Research profile and
-            published research papers.
-          </p>
+            <div className="author-page-eyebrow">
+              RESEARCHER
+            </div>
 
-        </section>
+            <h1>
+              {selectedAuthor.author_name}
+            </h1>
 
-        <section className="entity-content">
+            <p>
+              Research profile and
+              published research papers.
+            </p>
+
+          </section>
+
+
+          {/* ==================================================
+              BACK BUTTON
+              ================================================== */}
 
           <button
             type="button"
-            className="secondary-button"
+            className="author-clear-button"
             onClick={handleBack}
           >
             ← Back to Authors
           </button>
 
-          <section
-            style={{
-              marginTop: "24px",
-              padding: "28px",
-              background: "#ffffff",
-              border:
-                "1px solid #e5e7eb",
-              borderRadius: "16px",
-              display: "flex",
-              alignItems: "center",
-              gap: "20px",
-            }}
-          >
 
-            <div
-              style={{
-                width: "64px",
-                height: "64px",
-                minWidth: "64px",
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "#f1f5f9",
-                color: "#334155",
-                fontSize: "20px",
-                fontWeight: 700,
-              }}
-            >
+          {/* ==================================================
+              AUTHOR PROFILE
+              ================================================== */}
+
+          <section className="author-detail-card">
+
+            <div className="author-detail-avatar">
               {getInitials(
                 selectedAuthor.author_name,
               )}
             </div>
 
-            <div>
+            <div className="author-detail-content">
 
-              <div className="entity-eyebrow">
+              <div className="author-page-eyebrow">
                 RESEARCHER
               </div>
 
-              <h2
-                style={{
-                  margin:
-                    "4px 0 10px",
-                  fontSize: "26px",
-                }}
-              >
+              <h2>
                 {selectedAuthor.author_name}
               </h2>
 
-              <div
-                style={{
-                  display: "flex",
-                  gap: "20px",
-                  flexWrap: "wrap",
-                  color: "#6b7280",
-                  fontSize: "14px",
-                }}
-              >
+              <div className="author-detail-meta">
 
                 <span>
-                  Author ID:{" "}
+                  <span className="author-detail-meta-label">
+                    Author ID
+                  </span>
+
                   <strong>
-                    {
-                      selectedAuthor.author_id
-                    }
+                    {selectedAuthor.author_id}
                   </strong>
                 </span>
 
                 {selectedAuthor.orcid && (
                   <span>
-                    ORCID:{" "}
+                    <span className="author-detail-meta-label">
+                      ORCID
+                    </span>
+
                     <strong>
-                      {
-                        selectedAuthor.orcid
-                      }
+                      {selectedAuthor.orcid}
                     </strong>
                   </span>
                 )}
@@ -237,54 +243,28 @@ function AuthorsPage() {
 
           </section>
 
-          <section
-            style={{
-              marginTop: "36px",
-            }}
-          >
 
-            <div
-              style={{
-                display: "flex",
-                alignItems: "flex-end",
-                justifyContent:
-                  "space-between",
-                gap: "20px",
-                marginBottom: "20px",
-              }}
-            >
+          {/* ==================================================
+              RESEARCH PAPERS
+              ================================================== */}
+
+          <section className="author-detail-papers">
+
+            <div className="author-detail-section-header">
 
               <div>
 
-                <div className="entity-eyebrow">
+                <div className="author-page-eyebrow">
                   RESEARCH
                 </div>
 
-                <h2
-                  style={{
-                    margin: 0,
-                    fontSize: "26px",
-                  }}
-                >
+                <h2>
                   Research Papers
                 </h2>
 
               </div>
 
-              <span
-                style={{
-                  padding:
-                    "7px 12px",
-                  borderRadius: "20px",
-                  background:
-                    "#f1f5f9",
-                  color: "#475569",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  whiteSpace:
-                    "nowrap",
-                }}
-              >
+              <span className="author-paper-count">
                 {papers.length}{" "}
                 {papers.length === 1
                   ? "paper"
@@ -293,25 +273,38 @@ function AuthorsPage() {
 
             </div>
 
+
+            {/* =================================================
+                LOADING
+                ================================================= */}
+
             {detailLoading && (
               <LoadingState />
             )}
 
+
+            {/* =================================================
+                ERROR
+                ================================================= */}
+
             {!detailLoading &&
               detailError && (
                 <ErrorState
-                  message={
-                    detailError
-                  }
+                  message={detailError}
                 />
               )}
+
+
+            {/* =================================================
+                EMPTY
+                ================================================= */}
 
             {!detailLoading &&
               !detailError &&
               papers.length === 0 && (
-                <div className="entity-empty">
+                <div className="author-empty">
 
-                  <div className="entity-empty-icon">
+                  <div className="author-empty-icon">
                     📄
                   </div>
 
@@ -328,10 +321,15 @@ function AuthorsPage() {
                 </div>
               )}
 
+
+            {/* =================================================
+                PAPER GRID
+                ================================================= */}
+
             {!detailLoading &&
               !detailError &&
               papers.length > 0 && (
-                <div className="recommendation-grid">
+                <div className="author-paper-grid">
 
                   {papers.map(
                     (paper) => (
@@ -340,88 +338,34 @@ function AuthorsPage() {
                         key={
                           paper.paper_id
                         }
-                        className="paper-result-card"
+                        className="author-paper-card"
                         onClick={() =>
                           navigate(
                             `/papers/${paper.paper_id}`,
                           )
                         }
-                        style={{
-                          padding:
-                            "24px",
-                          cursor:
-                            "pointer",
-                        }}
                       >
 
-                        <div
-                          style={{
-                            display:
-                              "flex",
-                            justifyContent:
-                              "space-between",
-                            alignItems:
-                              "center",
-                            marginBottom:
-                              "18px",
-                          }}
-                        >
+                        <div className="author-paper-card-top">
 
-                          <span
-                            style={{
-                              fontSize:
-                                "24px",
-                            }}
-                          >
+                          <span className="author-paper-icon">
                             📄
                           </span>
 
-                          <span
-                            style={{
-                              color:
-                                "#9ca3af",
-                              fontSize:
-                                "12px",
-                              fontWeight:
-                                600,
-                            }}
-                          >
+                          <span className="author-paper-id">
                             PAPER #
-                            {
-                              paper.paper_id
-                            }
+                            {paper.paper_id}
                           </span>
 
                         </div>
 
-                        <h3
-                          style={{
-                            margin:
-                              "0 0 18px",
-                            fontSize:
-                              "17px",
-                            lineHeight:
-                              1.45,
-                          }}
-                        >
-                          {
-                            paper.paper_name
-                          }
+
+                        <h3>
+                          {paper.paper_name}
                         </h3>
 
-                        <div
-                          style={{
-                            display:
-                              "flex",
-                            flexWrap:
-                              "wrap",
-                            gap: "14px",
-                            color:
-                              "#6b7280",
-                            fontSize:
-                              "13px",
-                          }}
-                        >
+
+                        <div className="author-paper-meta">
 
                           {paper.publication_year !==
                             null &&
@@ -446,18 +390,8 @@ function AuthorsPage() {
 
                         </div>
 
-                        <div
-                          style={{
-                            marginTop:
-                              "22px",
-                            color:
-                              "#2563eb",
-                            fontSize:
-                              "13px",
-                            fontWeight:
-                              600,
-                          }}
-                        >
+
+                        <div className="author-paper-footer">
                           View paper →
                         </div>
 
@@ -470,11 +404,12 @@ function AuthorsPage() {
 
           </section>
 
-        </section>
+        </div>
 
       </main>
     );
   }
+
 
   /*
    * ==========================================================
@@ -483,109 +418,89 @@ function AuthorsPage() {
    */
 
   return (
-    <main className="entity-page">
+    <main className="author-page">
 
-      <section className="entity-hero">
+      <div className="author-page-container">
 
-        <div className="entity-eyebrow">
-          RESEARCHER DISCOVERY
-        </div>
+        {/* ====================================================
+            PAGE HEADER
+            ==================================================== */}
 
-        <h1>
-          Authors
-        </h1>
+        <section className="author-page-header">
 
-        <p>
-          Explore Researchers & Their Work.<br></br>
-          Find researchers by author name or ID and explore their research papers.
-        </p>
+          <div className="author-page-eyebrow">
+            RESEARCHER DISCOVERY
+          </div>
 
-      </section>
+          <h1>
+            Authors
+          </h1>
 
-      <section className="entity-content">
+          <p>
+            Explore Researchers &amp; Their Work.
+            <br />
+            Find researchers by author name or ID
+            and explore their research papers.
+          </p>
 
-        <section
-          style={{
-            background:
-              "#ffffff",
-            border:
-              "1px solid #e5e7eb",
-            borderRadius:
-              "16px",
-            padding: "24px",
-          }}
-        >
+        </section>
 
-          <div
-            style={{
-              marginBottom:
-                "18px",
-            }}
-          >
 
-            <div className="entity-eyebrow">
+        {/* ====================================================
+            SEARCH
+            ==================================================== */}
+
+        <section className="author-search-card">
+
+          <div className="author-search-header">
+
+            <span className="author-search-label">
               AUTHOR SEARCH
-            </div>
+            </span>
 
-            <h2
-              style={{
-                margin: 0,
-                fontSize: "22px",
-              }}
-            >
+            <h2>
               Find Researchers
             </h2>
 
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              gap: "12px",
-            }}
-          >
 
-            <div
-              className="entity-search"
-              style={{
-                flex: 1,
-              }}
-            >
+          <div className="author-search-form">
 
-              <span aria-hidden="true">
+            <div className="author-search-input-wrapper">
+
+              <span
+                className="author-search-icon"
+                aria-hidden="true"
+              >
                 👤
               </span>
 
               <input
                 type="search"
+                className="author-search-input"
                 value={search}
                 onChange={(event) =>
                   setSearch(
-                    event
-                      .currentTarget
-                      .value,
+                    event.currentTarget.value,
                   )
                 }
-                onKeyDown={
-                  handleKeyDown
-                }
+                onKeyDown={handleKeyDown}
                 placeholder="Search by author name or ID..."
                 aria-label="Search by author name or ID"
               />
 
             </div>
 
+
             <button
               type="button"
-              className="primary-button"
+              className="author-search-button"
               disabled={
                 loading ||
-                search.trim()
-                  .length === 0
+                search.trim().length === 0
               }
-              onClick={
-                handleSearch
-              }
+              onClick={handleSearch}
             >
               {loading
                 ? "Searching..."
@@ -596,99 +511,75 @@ function AuthorsPage() {
 
         </section>
 
+
+        {/* ====================================================
+            LOADING
+            ==================================================== */}
+
         {loading && (
-          <div
-            style={{
-              marginTop:
-                "24px",
-            }}
-          >
+          <div className="author-loading">
             <LoadingState />
           </div>
         )}
 
+
+        {/* ====================================================
+            ERROR
+            ==================================================== */}
+
         {!loading && error && (
-          <div
-            style={{
-              marginTop:
-                "20px",
-            }}
-          >
+          <div className="author-error">
             <ErrorState
               message={error}
             />
           </div>
         )}
 
-        {/*
-         * ======================================================
-         * RESULTS
-         * ======================================================
-         */}
+
+        {/* ====================================================
+            SEARCH RESULTS
+            ==================================================== */}
 
         {!loading &&
           !error &&
           authors.length > 0 && (
-            <section
-              style={{
-                marginTop:
-                  "32px",
-              }}
-            >
+            <section className="author-results">
 
-              <div
-                style={{
-                  display:
-                    "flex",
-                  alignItems:
-                    "flex-end",
-                  justifyContent:
-                    "space-between",
-                  gap: "20px",
-                  marginBottom:
-                    "20px",
-                }}
-              >
+              <div className="author-results-header">
 
                 <div>
 
-                  <div className="entity-eyebrow">
+                  <div className="author-page-eyebrow">
                     SEARCH RESULTS
                   </div>
 
-                  <h2
-                    style={{
-                      margin: 0,
-                      fontSize:
-                        "24px",
-                    }}
-                  >
-                    {
-                      total.toLocaleString()
-                    }{" "}
-                    {
-                      total === 1
-                        ? "author"
-                        : "authors"
-                    }{" "}
+                  <h2 className="author-results-title">
+                    {total.toLocaleString()}{" "}
+                    {total === 1
+                      ? "author"
+                      : "authors"}{" "}
                     found
                   </h2>
 
                 </div>
 
+
                 <button
                   type="button"
-                  className="secondary-button"
-                  onClick={
-                    handleClear
-                  }
+                  className="author-clear-button"
+                  onClick={handleClear}
                 >
                   Clear Search
                 </button>
 
               </div>
 
-              <div className="recommendation-grid">
+
+              {/* ==============================================
+                  AUTHOR RESULT GRID
+                  ============================================== */}
+
+              <div className="author-grid">
 
                 {authors.map(
                   (author) => (
@@ -703,149 +594,70 @@ function AuthorsPage() {
                           author.author_id,
                         )
                       }
-                      style={{
-                        padding:
-                          "24px",
-                        cursor:
-                          "pointer",
-                      }}
                     >
 
-                      <div
-                        style={{
-                          display:
-                            "flex",
-                          alignItems:
-                            "center",
-                          justifyContent:
-                            "space-between",
-                          marginBottom:
-                            "18px",
-                        }}
-                      >
+                      {/* ========================================
+                          CARD TOP
+                          ======================================== */}
 
-                        <div
-                          style={{
-                            width:
-                              "52px",
-                            height:
-                              "52px",
-                            borderRadius:
-                              "50%",
-                            display:
-                              "flex",
-                            alignItems:
-                              "center",
-                            justifyContent:
-                              "center",
-                            background:
-                              "#f1f5f9",
-                            color:
-                              "#334155",
-                            fontWeight:
-                              700,
-                            fontSize:
-                              "16px",
-                          }}
-                        >
+                      <div className="author-card-top">
+
+                        <div className="author-avatar">
                           {getInitials(
                             author.author_name,
                           )}
                         </div>
 
                         <span
+                          className="author-arrow"
                           aria-hidden="true"
-                          style={{
-                            color:
-                              "#94a3b8",
-                            fontSize:
-                              "20px",
-                          }}
                         >
                           →
                         </span>
 
                       </div>
 
-                      <div className="entity-eyebrow">
-                        RESEARCHER
-                      </div>
 
-                      <h3
-                        style={{
-                          margin:
-                            "6px 0 14px",
-                          fontSize:
-                            "18px",
-                        }}
-                      >
-                        {
-                          author.author_name
-                        }
+                      {/* ========================================
+                          AUTHOR INFORMATION
+                          ======================================== */}
+
+                      <span className="author-card-label">
+                        RESEARCHER
+                      </span>
+
+                      <h3 className="author-card-name">
+                        {author.author_name}
                       </h3>
 
-                      <div
-                        style={{
-                          display:
-                            "flex",
-                          alignItems:
-                            "center",
-                          gap: "8px",
-                          color:
-                            "#6b7280",
-                          fontSize:
-                            "13px",
-                        }}
-                      >
+
+                      <div className="author-card-meta">
 
                         <span>
                           Author ID
                         </span>
 
                         <strong>
-                          {
-                            author.author_id
-                          }
+                          {author.author_id}
                         </strong>
 
                       </div>
 
+
                       {author.orcid && (
-                        <div
-                          style={{
-                            marginTop:
-                              "8px",
-                            color:
-                              "#6b7280",
-                            fontSize:
-                              "12px",
-                          }}
-                        >
+                        <div className="author-card-orcid">
                           ORCID{" "}
-                          {
-                            author.orcid
-                          }
+                          {author.orcid}
                         </div>
                       )}
 
-                      <div
-                        style={{
-                          marginTop:
-                            "22px",
-                          paddingTop:
-                            "16px",
-                          borderTop:
-                            "1px solid #f1f5f9",
-                          color:
-                            "#2563eb",
-                          fontSize:
-                            "13px",
-                          fontWeight:
-                            600,
-                        }}
-                      >
-                        View research
-                        papers →
+
+                      {/* ========================================
+                          CARD FOOTER
+                          ======================================== */}
+
+                      <div className="author-card-footer">
+                        View research papers →
                       </div>
 
                     </button>
@@ -854,27 +666,18 @@ function AuthorsPage() {
 
               </div>
 
+
+              {/* ==============================================
+                  PAGINATION
+                  ============================================== */}
+
               {totalPages > 1 && (
-                <div
-                  style={{
-                    display:
-                      "flex",
-                    alignItems:
-                      "center",
-                    justifyContent:
-                      "center",
-                    gap: "20px",
-                    marginTop:
-                      "32px",
-                  }}
-                >
+                <div className="author-pagination">
 
                   <button
                     type="button"
-                    className="secondary-button"
-                    disabled={
-                      page <= 1
-                    }
+                    className="author-pagination-button"
+                    disabled={page <= 1}
                     onClick={() =>
                       void searchAuthors(
                         search.trim(),
@@ -885,26 +688,17 @@ function AuthorsPage() {
                     ← Previous
                   </button>
 
-                  <span
-                    style={{
-                      color:
-                        "#6b7280",
-                      fontSize:
-                        "14px",
-                    }}
-                  >
-                    Page{" "}
-                    {page}{" "}
-                    of{" "}
-                    {totalPages}
+
+                  <span className="author-pagination-info">
+                    Page {page} of {totalPages}
                   </span>
+
 
                   <button
                     type="button"
-                    className="secondary-button"
+                    className="author-pagination-button"
                     disabled={
-                      page >=
-                      totalPages
+                      page >= totalPages
                     }
                     onClick={() =>
                       void searchAuthors(
@@ -922,19 +716,18 @@ function AuthorsPage() {
             </section>
           )}
 
-        {/*
-         * ======================================================
-         * SEARCH COMPLETED BUT NO RESULTS
-         * ======================================================
-         */}
+
+        {/* ====================================================
+            NO RESULTS
+            ==================================================== */}
 
         {!loading &&
           !error &&
           hasSearched &&
           authors.length === 0 && (
-            <div className="entity-empty">
+            <div className="author-empty">
 
-              <div className="entity-empty-icon">
+              <div className="author-empty-icon">
                 🔍
               </div>
 
@@ -947,25 +740,24 @@ function AuthorsPage() {
                 <strong>
                   "{search}"
                 </strong>
-                . Try a different
-                author name or ID.
+                . Try a different author
+                name or ID.
               </p>
 
             </div>
           )}
 
-        {/*
-         * ======================================================
-         * INITIAL STATE
-         * ======================================================
-         */}
+
+        {/* ====================================================
+            INITIAL STATE
+            ==================================================== */}
 
         {!loading &&
           !error &&
           !hasSearched && (
-            <div className="entity-empty">
+            <div className="author-empty">
 
-              <div className="entity-empty-icon">
+              <div className="author-empty-icon">
                 👤
               </div>
 
@@ -974,16 +766,15 @@ function AuthorsPage() {
               </h2>
 
               <p>
-                Enter an author's name
-                or author ID above to
-                discover their research
-                papers.
+                Enter an author's name or
+                author ID above to discover
+                their research papers.
               </p>
 
             </div>
           )}
 
-      </section>
+      </div>
 
     </main>
   );

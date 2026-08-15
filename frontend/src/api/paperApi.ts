@@ -1,4 +1,10 @@
-import { httpClient } from "./axiosClient";
+import {
+  AxiosError,
+} from "axios";
+
+import {
+  httpClient,
+} from "./axiosClient";
 
 import type {
   PaperCollectionResponse,
@@ -7,45 +13,126 @@ import type {
   PaginatedPaperResponse,
 } from "../types/paper";
 
+
+// ============================================================
+// API Error
+// ============================================================
+
+export class PaperApiError extends Error {
+  status: number | undefined;
+
+  constructor(
+    message: string,
+    status?: number,
+  ) {
+    super(message);
+
+    this.name = "PaperApiError";
+    this.status = status;
+
+    Object.setPrototypeOf(
+      this,
+      PaperApiError.prototype,
+    );
+  }
+}
+
+
 // ============================================================
 // Error Helper
 // ============================================================
 
-function getApiErrorMessage(
+function createPaperApiError(
   error: unknown,
   fallback: string,
-): string {
-  if (
-    error &&
-    typeof error === "object" &&
-    "response" in error
-  ) {
-    const response = (
-      error as {
-        response?: {
-          data?: {
-            detail?: string;
-            message?: string;
-          };
-        };
-      }
-    ).response;
+): PaperApiError {
+  if (error instanceof PaperApiError) {
+    return error;
+  }
 
-    const detail =
-      response?.data?.detail ??
-      response?.data?.message;
 
-    if (typeof detail === "string" && detail.trim()) {
-      return detail;
+  if (error instanceof AxiosError) {
+    const status =
+      error.response?.status;
+
+
+    // ----------------------------------------------------------
+    // 404
+    // ----------------------------------------------------------
+
+    if (status === 404) {
+      return new PaperApiError(
+        "Paper does not exist.",
+        404,
+      );
     }
+
+
+    // ----------------------------------------------------------
+    // API error message
+    // ----------------------------------------------------------
+
+    const data =
+      error.response?.data;
+
+
+    if (
+      data &&
+      typeof data === "object"
+    ) {
+      const detail =
+        "detail" in data
+          ? data.detail
+          : undefined;
+
+      const message =
+        "message" in data
+          ? data.message
+          : undefined;
+
+
+      if (
+        typeof detail === "string" &&
+        detail.trim()
+      ) {
+        return new PaperApiError(
+          detail,
+          status,
+        );
+      }
+
+
+      if (
+        typeof message === "string" &&
+        message.trim()
+      ) {
+        return new PaperApiError(
+          message,
+          status,
+        );
+      }
+    }
+
+
+    return new PaperApiError(
+      fallback,
+      status,
+    );
   }
 
-  if (error instanceof Error && error.message) {
-    return error.message;
+
+  if (error instanceof Error) {
+    return new PaperApiError(
+      fallback,
+    );
   }
 
-  return fallback;
+
+  return new PaperApiError(
+    fallback,
+  );
 }
+
 
 // ============================================================
 // Get Papers
@@ -64,15 +151,14 @@ export async function getPapers(
       );
 
     return response.data;
-  } catch (error) {
-    throw new Error(
-      getApiErrorMessage(
-        error,
-        "Unable to search papers.",
-      ),
+  } catch (error: unknown) {
+    throw createPaperApiError(
+      error,
+      "Unable to search papers.",
     );
   }
 }
+
 
 // ============================================================
 // Get Paper By ID
@@ -81,9 +167,15 @@ export async function getPapers(
 export async function getPaperById(
   paperId: number,
 ): Promise<PaperDetail> {
-  if (!Number.isInteger(paperId) || paperId <= 0) {
-    throw new Error("Invalid paper ID.");
+  if (
+    !Number.isInteger(paperId) ||
+    paperId <= 0
+  ) {
+    throw new PaperApiError(
+      "Invalid paper ID.",
+    );
   }
+
 
   try {
     const response =
@@ -92,15 +184,14 @@ export async function getPaperById(
       );
 
     return response.data;
-  } catch (error) {
-    throw new Error(
-      getApiErrorMessage(
-        error,
-        "Unable to find the paper.",
-      ),
+  } catch (error: unknown) {
+    throw createPaperApiError(
+      error,
+      "Unable to find the paper.",
     );
   }
 }
+
 
 // ============================================================
 // Get Paper By Name
@@ -109,11 +200,16 @@ export async function getPaperById(
 export async function getPaperByName(
   paperName: string,
 ): Promise<PaperDetail> {
-  const name = paperName.trim();
+  const name =
+    paperName.trim();
+
 
   if (!name) {
-    throw new Error("Paper name is required.");
+    throw new PaperApiError(
+      "Paper name is required.",
+    );
   }
+
 
   try {
     const response =
@@ -127,15 +223,14 @@ export async function getPaperByName(
       );
 
     return response.data;
-  } catch (error) {
-    throw new Error(
-      getApiErrorMessage(
-        error,
-        "Unable to find the paper.",
-      ),
+  } catch (error: unknown) {
+    throw createPaperApiError(
+      error,
+      "Unable to find the paper.",
     );
   }
 }
+
 
 // ============================================================
 // Get Papers By IDs
@@ -154,11 +249,13 @@ export async function getPapersByIds(
     ),
   ];
 
+
   if (uniqueIds.length === 0) {
-    throw new Error(
+    throw new PaperApiError(
       "At least one valid paper ID is required.",
     );
   }
+
 
   try {
     const response =
@@ -172,15 +269,14 @@ export async function getPapersByIds(
       );
 
     return response.data;
-  } catch (error) {
-    throw new Error(
-      getApiErrorMessage(
-        error,
-        "Unable to find the requested papers.",
-      ),
+  } catch (error: unknown) {
+    throw createPaperApiError(
+      error,
+      "Unable to find the requested papers.",
     );
   }
 }
+
 
 // ============================================================
 // Get Papers By Names
@@ -192,16 +288,21 @@ export async function getPapersByNames(
   const names = [
     ...new Set(
       paperNames
-        .map((name) => name.trim())
+        .map(
+          (name) =>
+            name.trim(),
+        )
         .filter(Boolean),
     ),
   ];
 
+
   if (names.length === 0) {
-    throw new Error(
+    throw new PaperApiError(
       "At least one paper name is required.",
     );
   }
+
 
   try {
     const response =
@@ -215,15 +316,14 @@ export async function getPapersByNames(
       );
 
     return response.data;
-  } catch (error) {
-    throw new Error(
-      getApiErrorMessage(
-        error,
-        "Unable to find the requested papers.",
-      ),
+  } catch (error: unknown) {
+    throw createPaperApiError(
+      error,
+      "Unable to find the requested papers.",
     );
   }
 }
+
 
 // ============================================================
 // API Object

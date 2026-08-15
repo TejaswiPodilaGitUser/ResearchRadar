@@ -1,4 +1,4 @@
-from typing import List
+from typing import Annotated, List
 
 from fastapi import (
     APIRouter,
@@ -13,7 +13,9 @@ from app.core.exceptions import ResourceNotFoundException
 from app.database.database import get_db
 
 from app.schemas.recommendation_schema import (
+    EmergingTopicResponse,
     RecommendationListResponse,
+    TopicPaperPageResponse,
     TrendingPaperResponse,
 )
 
@@ -25,9 +27,15 @@ from app.services.topic_recommendation_service import (
     topic_recommendation_service,
 )
 
-from app.services.author_recommendation_service import (
-    author_recommendation_service,
-)
+
+# ============================================================
+# Dependencies
+# ============================================================
+
+DbSession = Annotated[
+    Session,
+    Depends(get_db),
+]
 
 
 # ============================================================
@@ -41,7 +49,7 @@ router = APIRouter(
 
 
 # ============================================================
-# GET /api/recommendations/trending
+# Trending Research
 # ============================================================
 
 @router.get(
@@ -49,21 +57,19 @@ router = APIRouter(
     response_model=List[TrendingPaperResponse],
 )
 def get_trending_papers(
-    limit: int = Query(
-        default=settings.RECOMMENDATION_DEFAULT_LIMIT,
-        ge=1,
-        le=settings.RECOMMENDATION_MAX_LIMIT,
-        description="Number of trending papers",
-    ),
-    db: Session = Depends(get_db),
+    db: DbSession,
+    limit: Annotated[
+        int,
+        Query(
+            default=10,
+            ge=1,
+            le=20,
+            description="Number of trending papers",
+        ),
+    ],
 ):
     """
-    Return trending research papers.
-
-    Ranking:
-        1. Citation count
-        2. Publication year
-        3. Paper ID
+    Return Top 10 trending research papers.
     """
 
     return recommendation_service.get_trending(
@@ -73,24 +79,58 @@ def get_trending_papers(
 
 
 # ============================================================
-# GET /api/recommendations/{paper_id}/similar
+# Emerging Topics
 # ============================================================
 
 @router.get(
-    "/{paper_id}/similar",
+    "/emerging-topics",
+    response_model=List[EmergingTopicResponse],
+)
+def get_emerging_topics(
+    db: DbSession,
+    limit: Annotated[
+        int,
+        Query(
+            default=10,
+            ge=1,
+            le=20,
+            description="Number of emerging topics",
+        ),
+    ],
+):
+    """
+    Return Top 10 emerging research topics.
+    """
+
+    return topic_recommendation_service.get_emerging_topics(
+        db=db,
+        limit=limit,
+    )
+
+
+# ============================================================
+# Similar Papers
+# ============================================================
+
+@router.get(
+    "/papers/{paper_id}/similar",
     response_model=RecommendationListResponse,
 )
 def get_similar_papers(
     paper_id: int,
-    limit: int = Query(
-        default=settings.RECOMMENDATION_DEFAULT_LIMIT,
-        ge=1,
-        le=settings.RECOMMENDATION_MAX_LIMIT,
-    ),
-    db: Session = Depends(get_db),
+    db: DbSession,
+    limit: Annotated[
+        int,
+        Query(
+            default=10,
+            ge=1,
+            le=20,
+            description="Number of similar papers",
+        ),
+    ],
 ):
     """
-    Return semantically similar papers.
+    Return papers semantically similar to a paper.
     """
 
     result = recommendation_service.get_similar(
@@ -106,119 +146,129 @@ def get_similar_papers(
         )
 
     return {
-        "results": result
+        "results": result,
     }
 
 
 # ============================================================
-# GET /api/recommendations/{paper_id}/by-topic
+# Topic Similar Papers
 # ============================================================
 
 @router.get(
-    "/{paper_id}/by-topic",
+    "/topics/{topic_id}/similar",
     response_model=RecommendationListResponse,
 )
-def get_topic_recommendations(
-    paper_id: int,
-    limit: int = Query(
-        default=settings.RECOMMENDATION_DEFAULT_LIMIT,
-        ge=1,
-        le=settings.RECOMMENDATION_MAX_LIMIT,
-    ),
-    db: Session = Depends(get_db),
+def get_similar_papers_by_topic(
+    topic_id: int,
+    db: DbSession,
+    limit: Annotated[
+        int,
+        Query(
+            default=10,
+            ge=1,
+            le=20,
+            description="Number of related papers",
+        ),
+    ],
 ):
     """
-    Return papers sharing topics with the source paper.
+    Return papers related to a topic.
     """
 
-    result = topic_recommendation_service.get_by_topic(
+    result = topic_recommendation_service.get_by_topic_id(
         db=db,
-        paper_id=paper_id,
+        topic_id=topic_id,
         limit=limit,
     )
 
     if result is None:
         raise ResourceNotFoundException(
-            resource="Paper",
-            resource_id=paper_id,
+            resource="Topic",
+            resource_id=topic_id,
         )
 
     return {
-        "results": result
+        "results": result,
     }
 
 
 # ============================================================
-# GET /api/recommendations/{paper_id}/by-author
+# Paginated Topic Papers
 # ============================================================
 
 @router.get(
-    "/{paper_id}/by-author",
-    response_model=RecommendationListResponse,
+    "/topics/{topic_id}/papers",
+    response_model=TopicPaperPageResponse,
 )
-def get_author_recommendations(
-    paper_id: int,
-    limit: int = Query(
-        default=settings.RECOMMENDATION_DEFAULT_LIMIT,
-        ge=1,
-        le=settings.RECOMMENDATION_MAX_LIMIT,
-    ),
-    db: Session = Depends(get_db),
+def get_papers_by_topic(
+    topic_id: int,
+    db: DbSession,
+    page: Annotated[
+        int,
+        Query(
+            default=1,
+            ge=1,
+            description="1-based page number",
+        ),
+    ],
+    limit: Annotated[
+        int,
+        Query(
+            default=10,
+            ge=1,
+            le=20,
+            description="Number of papers per page",
+        ),
+    ],
 ):
     """
-    Return papers sharing authors with the source paper.
+    Return paginated papers belonging to a topic.
+
+    Example:
+
+        /api/recommendations/topics/123/papers?page=1&limit=10
+
+    Response:
+
+        {
+            "topic_id": 123,
+            "topic_name": "Natural Language Processing",
+            "page": 1,
+            "limit": 10,
+            "total": 47,
+            "total_pages": 5,
+            "has_previous": false,
+            "has_next": true,
+            "results": [...]
+        }
     """
 
-    result = author_recommendation_service.get_by_author(
+    topic = topic_recommendation_service.get_topic(
         db=db,
-        paper_id=paper_id,
-        limit=limit,
+        topic_id=topic_id,
     )
 
-    if result is None:
+    if topic is None:
         raise ResourceNotFoundException(
-            resource="Paper",
-            resource_id=paper_id,
+            resource="Topic",
+            resource_id=topic_id,
+        )
+
+    pagination = recommendation_service.get_by_topic(
+        db=db,
+        topic_id=topic_id,
+        page=page,
+        page_size=limit,
+    )
+
+    if pagination is None:
+        raise ResourceNotFoundException(
+            resource="Topic",
+            resource_id=topic_id,
         )
 
     return {
-        "results": result
-    }
-
-
-# ============================================================
-# GET /api/recommendations/{paper_id}
-# ============================================================
-
-@router.get(
-    "/{paper_id}",
-    response_model=RecommendationListResponse,
-)
-def get_recommendations(
-    paper_id: int,
-    limit: int = Query(
-        default=settings.RECOMMENDATION_DEFAULT_LIMIT,
-        ge=1,
-        le=settings.RECOMMENDATION_MAX_LIMIT,
-    ),
-    db: Session = Depends(get_db),
-):
-    """
-    Return general recommendations for a paper.
-    """
-
-    result = recommendation_service.get_recommendations(
-        db=db,
-        paper_id=paper_id,
-        limit=limit,
-    )
-
-    if result is None:
-        raise ResourceNotFoundException(
-            resource="Paper",
-            resource_id=paper_id,
-        )
-
-    return {
-        "results": result
+        "topic_id": topic.id,
+        "topic_name": topic.name,
+        **pagination,
     }

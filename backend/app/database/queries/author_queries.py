@@ -26,14 +26,6 @@ def find_authors(
       - Single author ID
       - Multiple comma-separated author IDs
       - Mixed IDs and names
-
-    Examples:
-      2150
-      A Ford
-      2150,1561,2208
-      A Ford,A. H. Alamoodi
-      2150,A Ford,1561
-      裕二 池谷,A. H. Alamoodi
     """
 
     query = db.query(Author)
@@ -46,21 +38,6 @@ def find_authors(
         keyword = keyword.strip()
 
         if keyword:
-
-            # ------------------------------------------------
-            # IMPORTANT:
-            # Comma is the ONLY author separator.
-            #
-            # This means:
-            #
-            # A. H. Alamoodi
-            #
-            # remains one author name.
-            #
-            # 裕二 池谷
-            #
-            # also remains one author name.
-            # ------------------------------------------------
 
             search_values = [
                 value.strip()
@@ -134,7 +111,7 @@ def find_authors(
 
 
 # ============================================================
-# Get Author
+# Get Author By ID
 # ============================================================
 
 def find_author_by_id(
@@ -142,13 +119,59 @@ def find_author_by_id(
     author_id: int,
 ) -> Optional[Author]:
     """
-    Find an author by database author_id.
+    Find an author by database author ID.
     """
 
     return (
         db.query(Author)
         .filter(
             Author.id == author_id
+        )
+        .first()
+    )
+
+
+# ============================================================
+# Get Author By Name
+# ============================================================
+
+def find_author_by_name(
+    db: Session,
+    author_name: str,
+) -> Optional[Author]:
+    """
+    Find a single author by exact name.
+
+    Matching is case-insensitive.
+
+    Leading and trailing spaces are ignored.
+
+    Examples:
+      A Ford
+      A. H. Alamoodi
+      裕二 池谷
+      O'Connor
+      Smith-Jones
+    """
+
+    if not author_name:
+        return None
+
+    normalized_name = author_name.strip()
+
+    if not normalized_name:
+        return None
+
+    # --------------------------------------------------------
+    # Case-insensitive exact matching
+    # --------------------------------------------------------
+
+    return (
+        db.query(Author)
+        .filter(
+            func.lower(
+                Author.name
+            ) == normalized_name.casefold()
         )
         .first()
     )
@@ -164,6 +187,9 @@ def find_authors_by_ids(
 ) -> List[Author]:
     """
     Find multiple authors by their database IDs.
+
+    Duplicate IDs are removed while preserving
+    requested order.
     """
 
     if not author_ids:
@@ -226,13 +252,8 @@ def find_authors_by_names(
       - Spaces
       - Dots
       - Apostrophes
+      - Hyphens
       - Unicode characters
-
-    Examples:
-      A Ford
-      A. H. Alamoodi
-      裕二 池谷
-      O'Connor
     """
 
     if not names:
@@ -245,17 +266,14 @@ def find_authors_by_names(
     normalized_names = [
         name.strip()
         for name in names
-        if name.strip()
+        if name and name.strip()
     ]
 
     if not normalized_names:
         return []
 
     # --------------------------------------------------------
-    # Case-insensitive exact matching
-    #
-    # casefold() is used instead of lower() for
-    # better Unicode handling.
+    # Case-insensitive lookup
     # --------------------------------------------------------
 
     normalized_lookup = [
@@ -267,14 +285,28 @@ def find_authors_by_names(
     # Database query
     # --------------------------------------------------------
 
-    return (
+    authors = (
         db.query(Author)
         .filter(
             func.lower(
                 Author.name
-            ).in_(
-                normalized_lookup
-            )
+            ).in_(normalized_lookup)
         )
         .all()
     )
+
+    # --------------------------------------------------------
+    # Preserve requested order
+    # --------------------------------------------------------
+
+    authors_by_name = {
+        author.name.casefold(): author
+        for author in authors
+        if author.name
+    }
+
+    return [
+        authors_by_name[name.casefold()]
+        for name in normalized_names
+        if name.casefold() in authors_by_name
+    ]

@@ -1,3 +1,4 @@
+from math import ceil
 from typing import List, Optional
 
 from sqlalchemy.orm import Session
@@ -5,21 +6,34 @@ from sqlalchemy.orm import Session
 from app.models.paper import Paper
 
 from app.schemas.recommendation_schema import (
-    RecommendationPaperResponse,
     RecommendationAuthorResponse,
+    RecommendationPaperResponse,
     RecommendationTopicResponse,
+    TrendingPaperResponse,
+)
+
+from app.database.queries.recommendation_queries import (
+    count_papers_by_topic_id,
+    find_papers_by_topic_id,
+    find_similar_papers,
+    find_trending_papers,
+    get_paper_by_id,
 )
 
 
-class RecommendationService:
-    """
-    Common recommendation service.
+# ============================================================
+# Constants
+# ============================================================
 
-    Responsibilities:
-        - Find source paper
-        - Semantic similarity
-        - Map database models to API responses
-    """
+DEFAULT_PAGE = 1
+DEFAULT_PAGE_SIZE = 10
+MAX_PAGE_SIZE = 20
+
+DEFAULT_RECOMMENDATION_LIMIT = 10
+MAX_RECOMMENDATION_LIMIT = 20
+
+
+class RecommendationService:
 
     # ========================================================
     # Get Paper
@@ -30,16 +44,10 @@ class RecommendationService:
         db: Session,
         paper_id: int,
     ) -> Optional[Paper]:
-        """
-        Retrieve a paper by database ID.
-        """
 
-        return (
-            db.query(Paper)
-            .filter(
-                Paper.id == paper_id
-            )
-            .first()
+        return get_paper_by_id(
+            db=db,
+            paper_id=paper_id,
         )
 
     # ========================================================
@@ -47,10 +55,9 @@ class RecommendationService:
     # ========================================================
 
     @staticmethod
-    def map_author(author):
-        """
-        Convert Author model to API response.
-        """
+    def map_author(
+        author,
+    ) -> RecommendationAuthorResponse:
 
         return RecommendationAuthorResponse(
             author_id=author.id,
@@ -62,10 +69,9 @@ class RecommendationService:
     # ========================================================
 
     @staticmethod
-    def map_topic(topic):
-        """
-        Convert Topic model to API response.
-        """
+    def map_topic(
+        topic,
+    ) -> RecommendationTopicResponse:
 
         return RecommendationTopicResponse(
             topic_id=topic.id,
@@ -81,35 +87,23 @@ class RecommendationService:
         cls,
         paper: Paper,
     ) -> RecommendationPaperResponse:
-        """
-        Convert Paper model to recommendation response.
-        """
 
         return RecommendationPaperResponse(
-
             paper_id=paper.id,
-
             paper_name=paper.title,
-
             abstract=paper.abstract,
-
             publication_year=paper.publication_year,
-
             publication_date=(
                 paper.publication_date.isoformat()
                 if paper.publication_date
                 else None
             ),
-
             doi=paper.doi,
-
             cited_by_count=paper.cited_by_count,
-
             authors=[
                 cls.map_author(author)
                 for author in paper.authors
             ],
-
             topics=[
                 cls.map_topic(topic)
                 for topic in paper.topics
@@ -125,9 +119,6 @@ class RecommendationService:
         cls,
         papers: List[Paper],
     ) -> List[RecommendationPaperResponse]:
-        """
-        Convert multiple Paper models to API responses.
-        """
 
         return [
             cls.map_paper(paper)
@@ -135,7 +126,34 @@ class RecommendationService:
         ]
 
     # ========================================================
-    # Semantic Similarity
+    # Trending Mapping
+    # ========================================================
+
+    @staticmethod
+    def map_trending_paper(
+        paper: Paper,
+    ) -> TrendingPaperResponse:
+
+        return TrendingPaperResponse(
+            paper_id=paper.id,
+            paper_name=paper.title,
+            publication_year=paper.publication_year,
+            cited_by_count=paper.cited_by_count,
+        )
+
+    @classmethod
+    def map_trending_papers(
+        cls,
+        papers: List[Paper],
+    ) -> List[TrendingPaperResponse]:
+
+        return [
+            cls.map_trending_paper(paper)
+            for paper in papers
+        ]
+
+    # ========================================================
+    # Similar Papers
     # ========================================================
 
     def get_similar(
@@ -143,10 +161,7 @@ class RecommendationService:
         db: Session,
         paper_id: int,
         limit: int,
-    ):
-        """
-        Find papers semantically similar to source paper.
-        """
+    ) -> Optional[List[RecommendationPaperResponse]]:
 
         paper = self.get_paper(
             db=db,
@@ -159,26 +174,97 @@ class RecommendationService:
         if paper.embedding is None:
             return []
 
-        distance = (
-            Paper.embedding.cosine_distance(
-                paper.embedding
-            )
+        limit = max(
+            1,
+            min(
+                limit,
+                MAX_RECOMMENDATION_LIMIT,
+            ),
         )
 
-        papers = (
-            db.query(Paper)
-            .filter(
-                Paper.id != paper_id,
-                Paper.embedding.is_not(None),
-            )
-            .order_by(
-                distance.asc()
-            )
-            .limit(limit)
-            .all()
+        papers = find_similar_papers(
+            db=db,
+            paper=paper,
+            limit=limit,
         )
 
         return self.map_papers(papers)
+
+    # ========================================================
+    # Count Topic Papers
+    # ========================================================
+
+    def get_topic_paper_count(
+        self,
+        db: Session,
+        topic_id: int,
+    ) -> Optional[int]:
+
+        return count_papers_by_topic_id(
+            db=db,
+            topic_id=topic_id,
+        )
+
+    # ========================================================
+    # Paginated Topic Papers
+    # ========================================================
+
+    def get_by_topic(
+        self,
+        db: Session,
+        topic_id: int,
+        page: int = DEFAULT_PAGE,
+        page_size: int = DEFAULT_PAGE_SIZE,
+    ) -> Optional[dict]:
+
+        page = max(
+            page,
+            DEFAULT_PAGE,
+        )
+
+        page_size = max(
+            1,
+            min(
+                page_size,
+                MAX_PAGE_SIZE,
+            ),
+        )
+
+        total = self.get_topic_paper_count(
+            db=db,
+            topic_id=topic_id,
+        )
+
+        if total is None:
+            return None
+
+        total_pages = (
+            ceil(total / page_size)
+            if total > 0
+            else 0
+        )
+
+        papers = find_papers_by_topic_id(
+            db=db,
+            topic_id=topic_id,
+            page=page,
+            limit=page_size,
+        )
+
+        if papers is None:
+            return None
+
+        return {
+            "page": page,
+            "limit": page_size,
+            "total": total,
+            "total_pages": total_pages,
+            "has_previous": page > 1,
+            "has_next": page < total_pages,
+            "results": self.map_papers(
+                papers
+            ),
+        }
 
     # ========================================================
     # Trending
@@ -187,24 +273,28 @@ class RecommendationService:
     def get_trending(
         self,
         db: Session,
-        limit: int,
-    ):
-        """
-        Return highly cited and recent papers.
-        """
+        limit: int = DEFAULT_RECOMMENDATION_LIMIT,
+    ) -> List[TrendingPaperResponse]:
 
-        papers = (
-            db.query(Paper)
-            .order_by(
-                Paper.cited_by_count.desc(),
-                Paper.publication_year.desc(),
-                Paper.id.desc(),
-            )
-            .limit(limit)
-            .all()
+        # Trending Research is intentionally limited
+        # to the Top 10 by default.
+
+        limit = max(
+            1,
+            min(
+                limit,
+                MAX_RECOMMENDATION_LIMIT,
+            ),
         )
 
-        return self.map_papers(papers)
+        papers = find_trending_papers(
+            db=db,
+            limit=limit,
+        )
+
+        return self.map_trending_papers(
+            papers
+        )
 
 
 # ============================================================

@@ -1,0 +1,383 @@
+/* ============================================================
+   PAPER PAGE
+   ============================================================ */
+
+.paper-page {
+  min-height: calc(100vh - 72px);
+  background: #f7f8fa;
+  color: #111827;
+}
+
+.paper-page-container {
+  width: min(1280px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 36px 0 56px;
+}
+
+
+/* ============================================================
+   PAGE HEADER
+   ============================================================ */
+
+.paper-page-header {
+  margin-bottom: 28px;
+}
+
+.paper-page-title {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.2;
+  font-weight: 700;
+  color: #111827;
+}
+
+.paper-page-description {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+
+/* ============================================================
+   SEARCH / FILTERS
+   ============================================================ */
+
+.paper-page-search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.paper-page-search input {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  padding: 0 14px;
+
+  border: 1px solid #d7dee8;
+  border-radius: 8px;
+
+  background: #ffffff;
+  color: #111827;
+
+  font-size: 14px;
+  outline: none;
+}
+
+.paper-page-search input:focus {
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.15);
+}
+
+.paper-page-search button {
+  height: 44px;
+  padding: 0 20px;
+
+  border: 0;
+  border-radius: 8px;
+
+  background: #111827;
+  color: #ffffff;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.paper-page-search button:hover {
+  background: #1f2937;
+}
+
+
+/* ============================================================
+   FILTERS
+   ============================================================ */
+
+.paper-page-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.paper-page-filters select,
+.paper-page-filters input {
+  height: 40px;
+  padding: 0 12px;
+
+  border: 1px solid #d7dee8;
+  border-radius: 7px;
+
+  background: #ffffff;
+  color: #334155;
+
+  font-size: 14px;
+  outline: none;
+}
+
+.paper-page-filters select:focus,
+.paper-page-filters input:focus {
+  border-color: #94a3b8;
+}
+
+
+/* ============================================================
+   RESULTS HEADER
+   ============================================================ */
+
+.paper-page-results {
+  margin-top: 4px;
+}
+
+.paper-page-results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin-bottom: 16px;
+}
+
+.paper-page-results-count {
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+
+/* ============================================================
+   PAPER GRID
+   ============================================================ */
+
+.paper-page-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+
+  gap: 20px;
+}
+
+
+/* ============================================================
+   PAPER CARD
+   ============================================================ */
+
+.paper-page-grid .paper-card {
+  display: flex;
+  flex-direction: column;
+
+  min-width: 0;
+  min-height: 250px;
+
+  padding: 22px;
+
+  background: #ffffff;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04);
+
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.paper-page-grid .paper-card:hover {
+  border-color: #cbd5e1;
+
+  box-shadow:
+    0 8px 24px rgba(15, 23, 42, 0.07);
+
+  transform: translateY(-1px);
+}
+
+
+/* ============================================================
+   CARD CONTENT
+   ============================================================ */
+
+.paper-page-grid .paper-card-title {
+  margin: 0 0 10px;
+
+  color: #111827;
+
+  font-size: 17px;
+  line-height: 1.45;
+  font-weight: 650;
+}
+
+.paper-page-grid .paper-card-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  margin-bottom: 14px;
+
+  color: #64748b;
+  font-size: 13px;
+}
+
+.paper-page-grid .paper-card-authors {
+  margin-bottom: 14px;
+
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.paper-page-grid .paper-card-topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+
+  margin-bottom: 18px;
+}
+
+.paper-page-grid .paper-topic {
+  display: inline-flex;
+  align-items: center;
+
+  padding: 4px 8px;
+
+  border-radius: 5px;
+
+  background: #f1f5f9;
+  color: #475569;
+
+  font-size: 12px;
+  font-weight: 500;
+}
+
+
+/* ============================================================
+   VIEW PAPER
+   ============================================================ */
+
+.paper-page-grid .paper-card-action {
+  margin-top: auto;
+  padding-top: 16px;
+}
+
+.paper-page-grid .paper-card-action button,
+.paper-page-grid .paper-card-action a {
+  display: inline-flex;
+  align-items: center;
+
+  color: #2563eb;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  text-decoration: none;
+}
+
+.paper-page-grid .paper-card-action button:hover,
+.paper-page-grid .paper-card-action a:hover {
+  color: #1d4ed8;
+}
+
+
+/* ============================================================
+   EMPTY STATE
+   ============================================================ */
+
+.paper-page-empty {
+  padding: 56px 20px;
+
+  text-align: center;
+
+  background: #ffffff;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+
+  color: #64748b;
+}
+
+
+/* ============================================================
+   PAGINATION
+   ============================================================ */
+
+.paper-page-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  margin-top: 28px;
+}
+
+.paper-page-pagination button {
+  min-width: 36px;
+  height: 36px;
+
+  padding: 0 10px;
+
+  border: 1px solid #d7dee8;
+  border-radius: 7px;
+
+  background: #ffffff;
+  color: #334155;
+
+  font-size: 13px;
+
+  cursor: pointer;
+}
+
+.paper-page-pagination button:hover {
+  background: #f8fafc;
+}
+
+.paper-page-pagination button.active {
+  background: #111827;
+  border-color: #111827;
+  color: #ffffff;
+}
+
+.paper-page-pagination button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 1000px) {
+  .paper-page-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 650px) {
+  .paper-page-container {
+    width: min(100% - 28px, 1280px);
+    padding-top: 24px;
+  }
+
+  .paper-page-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .paper-page-search {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .paper-page-search button {
+    width: 100%;
+  }
+
+  .paper-page-results-header {
+    align-items: flex-start;
+  }
+}

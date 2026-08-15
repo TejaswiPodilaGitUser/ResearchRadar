@@ -1,0 +1,240 @@
+/* ============================================================
+   Main Navigation
+   ============================================================ */
+
+.main-navigation {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+
+  width: 100%;
+
+  background: rgba(255, 255, 255, 0.96);
+
+  border-bottom: 1px solid #e5e7eb;
+
+  backdrop-filter: blur(12px);
+}
+
+
+/* ============================================================
+   Container
+   ============================================================ */
+
+.navigation-container {
+  max-width: 1200px;
+
+  min-height: 72px;
+
+  margin: 0 auto;
+  padding: 0 24px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 48px;
+}
+
+
+/* ============================================================
+   Brand
+   ============================================================ */
+
+.navigation-brand {
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  flex-shrink: 0;
+
+  text-decoration: none;
+
+  color: #111827;
+}
+
+
+.brand-icon {
+  width: 34px;
+  height: 34px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 10px;
+
+  background: #111827;
+
+  color: #ffffff;
+
+  font-size: 17px;
+  font-weight: 700;
+}
+
+
+.brand-text {
+  font-size: 16px;
+  font-weight: 750;
+
+  letter-spacing: -0.02em;
+
+  white-space: nowrap;
+}
+
+
+/* ============================================================
+   Navigation Tabs
+   ============================================================ */
+
+.navigation-tabs {
+  display: flex;
+  align-items: center;
+
+  gap: 6px;
+
+  height: 72px;
+}
+
+
+.navigation-tab {
+  position: relative;
+
+  height: 42px;
+
+  padding: 0 14px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 7px;
+
+  border-radius: 9px;
+
+  color: #6b7280;
+
+  text-decoration: none;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  transition:
+    color 0.18s ease,
+    background 0.18s ease;
+}
+
+
+.navigation-tab:hover {
+  color: #111827;
+
+  background: #f3f4f6;
+}
+
+
+.navigation-tab-active {
+  color: #111827;
+
+  background: #f3f4f6;
+}
+
+
+.navigation-tab-active::after {
+  content: "";
+
+  position: absolute;
+
+  left: 14px;
+  right: 14px;
+
+  bottom: -15px;
+
+  height: 2px;
+
+  border-radius: 2px;
+
+  background: #111827;
+}
+
+
+.navigation-tab-icon {
+  font-size: 15px;
+
+  line-height: 1;
+}
+
+
+/* ============================================================
+   Recommendations
+   ============================================================ */
+
+.navigation-tab:last-child {
+  margin-left: 8px;
+}
+
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+
+@media (max-width: 900px) {
+  .navigation-container {
+    gap: 20px;
+  }
+
+  .brand-text {
+    display: none;
+  }
+
+  .navigation-tabs {
+    gap: 2px;
+  }
+
+  .navigation-tab {
+    padding: 0 10px;
+  }
+}
+
+
+@media (max-width: 650px) {
+  .navigation-container {
+    min-height: 64px;
+
+    padding: 0 12px;
+
+    gap: 8px;
+  }
+
+  .navigation-tabs {
+    flex: 1;
+
+    overflow-x: auto;
+
+    height: 64px;
+
+    scrollbar-width: none;
+  }
+
+  .navigation-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .navigation-tab {
+    flex-shrink: 0;
+
+    font-size: 13px;
+
+    padding: 0 9px;
+  }
+
+  .navigation-tab-active::after {
+    bottom: -11px;
+
+    left: 9px;
+    right: 9px;
+  }
+
+  .navigation-tab:last-child {
+    margin-left: 0;
+  }
+}

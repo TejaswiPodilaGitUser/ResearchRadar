@@ -21,6 +21,7 @@ from app.schemas.author_schema import (
 from app.services.author_service import (
     search_authors,
     get_author_by_id,
+    get_author_by_name,
     get_multiple_authors,
     get_multiple_authors_by_names,
 )
@@ -95,7 +96,6 @@ def get_authors(
 
         Single author name:
         /api/authors?keyword=A%20Ford
-
     """
 
     return search_authors(
@@ -104,7 +104,6 @@ def get_authors(
         size=size,
         keyword=keyword,
     )
-
 
 
 # ============================================================
@@ -136,6 +135,56 @@ def get_author(
         )
 
     return author
+
+
+# ============================================================
+# GET /authors/name
+# ============================================================
+
+@router.get(
+    "/name",
+    response_model=AuthorDetailResponse,
+    summary="Get Author By Name",
+)
+def get_author_by_name_endpoint(
+    db: DbSession,
+
+    name: Annotated[
+        str,
+        Query(
+            min_length=1,
+            max_length=settings.MAX_AUTHOR_LENGTH,
+            description="Exact author name.",
+        ),
+    ],
+):
+    """
+    Get a single author by name.
+
+    Matching is case-insensitive.
+
+    Leading and trailing spaces are ignored.
+
+    Example:
+
+        /api/authors/name?name=A%20Ford
+    """
+
+    author_name = name.strip()
+
+    author = get_author_by_name(
+        db=db,
+        author_name=author_name,
+    )
+
+    if author is None:
+        raise ResourceNotFoundException(
+            resource="Author",
+            resource_id=author_name,
+        )
+
+    return author
+
 
 # ============================================================
 # GET /authors/multiple/ids
@@ -169,28 +218,16 @@ def get_multiple_authors_by_ids_endpoint(
         /api/authors/multiple/ids?author_ids=2208,1561,2150
     """
 
-    # --------------------------------------------------------
-    # Parse IDs
-    # --------------------------------------------------------
-
     values = [
         value.strip()
         for value in author_ids.split(",")
         if value.strip()
     ]
 
-    # --------------------------------------------------------
-    # Validate number of IDs
-    # --------------------------------------------------------
-
     if len(values) < 2:
         raise ValueError(
             "At least two author IDs are required."
         )
-
-    # --------------------------------------------------------
-    # Validate IDs
-    # --------------------------------------------------------
 
     if not all(
         value.isdigit()
@@ -201,18 +238,10 @@ def get_multiple_authors_by_ids_endpoint(
             "comma-separated integers."
         )
 
-    # --------------------------------------------------------
-    # Convert IDs
-    # --------------------------------------------------------
-
     parsed_ids = [
         int(value)
         for value in values
     ]
-
-    # --------------------------------------------------------
-    # Get multiple authors
-    # --------------------------------------------------------
 
     return get_multiple_authors(
         db=db,
@@ -270,28 +299,16 @@ def get_multiple_authors_by_names_endpoint(
         O'Connor,Smith-Jones
     """
 
-    # --------------------------------------------------------
-    # Parse names
-    # --------------------------------------------------------
-
     names = [
         name.strip()
         for name in author_names.split(",")
         if name.strip()
     ]
 
-    # --------------------------------------------------------
-    # Validate number of names
-    # --------------------------------------------------------
-
     if len(names) < 2:
         raise ValueError(
             "At least two author names are required."
         )
-
-    # --------------------------------------------------------
-    # Get multiple authors
-    # --------------------------------------------------------
 
     return get_multiple_authors_by_names(
         db=db,

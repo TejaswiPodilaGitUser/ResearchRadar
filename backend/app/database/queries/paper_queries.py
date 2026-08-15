@@ -1,10 +1,7 @@
 from typing import Optional
 
 from sqlalchemy import func, or_
-from sqlalchemy.orm import (
-    Session,
-    selectinload,
-)
+from sqlalchemy.orm import Session, selectinload
 
 from app.models.paper import Paper
 from app.models.author import Author
@@ -12,7 +9,25 @@ from app.models.topic import Topic
 
 
 # ============================================================
-# Search Papers
+# Shared Paper Loading Options
+# ============================================================
+
+def _paper_query_with_relationships(db: Session):
+    """
+    Create a Paper query with authors and topics eagerly loaded.
+    """
+
+    return (
+        db.query(Paper)
+        .options(
+            selectinload(Paper.authors),
+            selectinload(Paper.topics),
+        )
+    )
+
+
+# ============================================================
+# Exact / Filtered Paper Search
 # ============================================================
 
 def find_papers(
@@ -20,31 +35,66 @@ def find_papers(
     offset: int,
     limit: int,
     keyword: Optional[str] = None,
+    paper_id: Optional[int] = None,
     year: Optional[int] = None,
     topic: Optional[str] = None,
     author: Optional[str] = None,
 ):
     """
-    Find papers using optional filters.
+    Search papers using exact paper ID or text/filter criteria.
 
-    Database responsibility only.
+    Search behavior:
+
+        paper_id
+            Exact database ID match.
+
+        keyword
+            Partial case-insensitive match against:
+                - title
+                - abstract
+
+        year
+            Exact publication year.
+
+        topic
+            Partial case-insensitive topic match.
+
+        author
+            Partial case-insensitive author match.
+
+    Returns:
+        tuple[int, list[Paper]]
     """
 
-    query = db.query(Paper)
+    # Use the shared query so authors and topics are
+    # eagerly loaded for all search result types.
+    query = _paper_query_with_relationships(db)
+
+    # --------------------------------------------------------
+    # Paper ID
+    # --------------------------------------------------------
+
+    if paper_id is not None:
+        query = query.filter(
+            Paper.id == paper_id
+        )
 
     # --------------------------------------------------------
     # Keyword
     # --------------------------------------------------------
 
     if keyword:
-        search_text = f"%{keyword.strip()}%"
+        value = keyword.strip()
 
-        query = query.filter(
-            or_(
-                Paper.title.ilike(search_text),
-                Paper.abstract.ilike(search_text),
+        if value:
+            search_text = f"%{value}%"
+
+            query = query.filter(
+                or_(
+                    Paper.title.ilike(search_text),
+                    Paper.abstract.ilike(search_text),
+                )
             )
-        )
 
     # --------------------------------------------------------
     # Publication year
@@ -60,30 +110,36 @@ def find_papers(
     # --------------------------------------------------------
 
     if topic:
-        query = (
-            query
-            .join(Paper.topics)
-            .filter(
-                Topic.name.ilike(
-                    f"%{topic.strip()}%"
+        value = topic.strip()
+
+        if value:
+            query = (
+                query
+                .join(Paper.topics)
+                .filter(
+                    Topic.name.ilike(
+                        f"%{value}%"
+                    )
                 )
             )
-        )
 
     # --------------------------------------------------------
     # Author
     # --------------------------------------------------------
 
     if author:
-        query = (
-            query
-            .join(Paper.authors)
-            .filter(
-                Author.name.ilike(
-                    f"%{author.strip()}%"
+        value = author.strip()
+
+        if value:
+            query = (
+                query
+                .join(Paper.authors)
+                .filter(
+                    Author.name.ilike(
+                        f"%{value}%"
+                    )
                 )
             )
-        )
 
     # --------------------------------------------------------
     # Count
@@ -119,7 +175,7 @@ def find_papers(
 
 
 # ============================================================
-# Get Paper By ID
+# Exact Paper By ID
 # ============================================================
 
 def find_paper_by_id(
@@ -127,15 +183,14 @@ def find_paper_by_id(
     paper_id: int,
 ) -> Optional[Paper]:
     """
-    Find a single paper by database ID.
+    Find one paper by exact database ID.
     """
 
+    if paper_id is None or paper_id <= 0:
+        return None
+
     return (
-        db.query(Paper)
-        .options(
-            selectinload(Paper.authors),
-            selectinload(Paper.topics),
-        )
+        _paper_query_with_relationships(db)
         .filter(
             Paper.id == paper_id
         )
@@ -144,7 +199,39 @@ def find_paper_by_id(
 
 
 # ============================================================
-# Get Papers By IDs
+# Exact Paper By Name
+# ============================================================
+
+def find_paper_by_name(
+    db: Session,
+    paper_name: str,
+) -> Optional[Paper]:
+    """
+    Find one paper by exact title.
+
+    Case-insensitive.
+    """
+
+    if not paper_name:
+        return None
+
+    name = paper_name.strip()
+
+    if not name:
+        return None
+
+    return (
+        _paper_query_with_relationships(db)
+        .filter(
+            func.lower(Paper.title)
+            == name.casefold()
+        )
+        .first()
+    )
+
+
+# ============================================================
+# Multiple Papers By IDs
 # ============================================================
 
 def find_papers_by_ids(
@@ -154,81 +241,37 @@ def find_papers_by_ids(
     """
     Find multiple papers by database IDs.
 
-    Optimized for fetching a collection of papers.
-
-    Characteristics:
-        - Single primary Paper query.
-        - selectinload for authors.
-        - selectinload for topics.
-        - No N+1 relationship queries.
-        - Duplicate IDs are removed before querying.
-        - Results are returned in requested ID order.
+    Missing IDs are ignored.
+    Requested order is preserved.
     """
-
-    # --------------------------------------------------------
-    # Empty collection
-    # --------------------------------------------------------
 
     if not paper_ids:
         return []
 
-    # --------------------------------------------------------
-    # Remove duplicates while preserving order
-    #
-    # Example:
-    #
-    # [101, 102, 101, 103]
-    #
-    # becomes:
-    #
-    # [101, 102, 103]
-    # --------------------------------------------------------
-
     unique_ids = list(
-        dict.fromkeys(paper_ids)
+        dict.fromkeys(
+            paper_id
+            for paper_id in paper_ids
+            if isinstance(paper_id, int)
+            and paper_id > 0
+        )
     )
 
-    # --------------------------------------------------------
-    # Fetch papers
-    #
-    # SQL equivalent:
-    #
-    # SELECT ...
-    # FROM papers
-    # WHERE id IN (...)
-    #
-    # Relationships are loaded using selectinload.
-    # --------------------------------------------------------
+    if not unique_ids:
+        return []
 
     papers = (
-        db.query(Paper)
-        .options(
-            selectinload(Paper.authors),
-            selectinload(Paper.topics),
-        )
+        _paper_query_with_relationships(db)
         .filter(
             Paper.id.in_(unique_ids)
         )
         .all()
     )
 
-    # --------------------------------------------------------
-    # Preserve requested order
-    #
-    # Database does not guarantee IN(...) ordering.
-    #
-    # If frontend sends:
-    #
-    # [103, 101, 102]
-    #
-    # response will also be:
-    #
-    # [103, 101, 102]
-    # --------------------------------------------------------
-
     papers_by_id = {
         paper.id: paper
         for paper in papers
+        if paper is not None
     }
 
     return [
@@ -237,3 +280,74 @@ def find_papers_by_ids(
         if paper_id in papers_by_id
     ]
 
+
+# ============================================================
+# Multiple Papers By Names
+# ============================================================
+
+def find_papers_by_names(
+    db: Session,
+    paper_names: list[str],
+) -> list[Paper]:
+    """
+    Find multiple papers by exact title.
+
+    Case-insensitive.
+    Missing names are ignored.
+    Requested order is preserved.
+    """
+
+    if not paper_names:
+        return []
+
+    unique_names: list[str] = []
+    seen_names: set[str] = set()
+
+    for name in paper_names:
+
+        if not name:
+            continue
+
+        value = name.strip()
+
+        if not value:
+            continue
+
+        normalized = value.casefold()
+
+        if normalized in seen_names:
+            continue
+
+        seen_names.add(normalized)
+        unique_names.append(value)
+
+    if not unique_names:
+        return []
+
+    search_names = [
+        name.casefold()
+        for name in unique_names
+    ]
+
+    papers = (
+        _paper_query_with_relationships(db)
+        .filter(
+            func.lower(Paper.title).in_(
+                search_names
+            )
+        )
+        .all()
+    )
+
+    papers_by_name = {
+        paper.title.casefold(): paper
+        for paper in papers
+        if paper is not None
+        and paper.title
+    }
+
+    return [
+        papers_by_name[name.casefold()]
+        for name in unique_names
+        if name.casefold() in papers_by_name
+    ]

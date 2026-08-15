@@ -4,8 +4,28 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 
 import "./index.css";
+import "./styles/layout.css";
+import "./styles/navigation.css";
+import "./styles/components.css";
+import "./styles/pages.css";
 
-const rootElement = document.getElementById("root");
+import "./styles/home-page.css";
+import "./styles/search-page.css";
+import "./styles/paper-page.css";
+import "./styles/paper-detail.css";
+import "./styles/author-page.css";
+import "./styles/topic-page.css";
+
+import "./styles/metrics.css";
+import "./styles/api-metrics.css";
+
+import "./styles/error-state.css";
+import "./styles/pagination.css";
+
+
+const rootElement =
+  document.getElementById("root");
+
 
 if (!rootElement) {
   throw new Error(
@@ -13,7 +33,10 @@ if (!rootElement) {
   );
 }
 
-ReactDOM.createRoot(rootElement).render(
+
+ReactDOM.createRoot(
+  rootElement,
+).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>,

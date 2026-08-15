@@ -1,3 +1,5 @@
+import "../../styles/pagination.css"
+
 interface PaginationProps {
   page: number;
   pageSize: number;
@@ -29,6 +31,7 @@ export function Pagination({
     >
       <button
         type="button"
+        className="pagination__previous"
         disabled={!canGoPrevious}
         onClick={() =>
           onPageChange(page - 1)
@@ -46,6 +49,7 @@ export function Pagination({
 
       <button
         type="button"
+        className="pagination__next"
         disabled={!canGoNext}
         onClick={() =>
           onPageChange(page + 1)

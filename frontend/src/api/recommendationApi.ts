@@ -1,29 +1,32 @@
 import { axiosClient } from "./axiosClient";
 
-import type { PaperDetail } from "../types/paper";
+import type {
+  EmergingTopic,
+  RecommendationPaper,
+  RecommendationListResponse,
+} from "../types/recommendation";
+
 
 // ============================================================
-// Similar Papers
+// Topic Papers Response
 // ============================================================
 
-export async function getSimilarPapers(
-  paperId: number,
-  limit = 5,
-): Promise<PaperDetail[]> {
-  const response =
-    await axiosClient.get<{
-      results: PaperDetail[];
-    }>(
-      `/api/recommendations/${paperId}/similar`,
-      {
-        params: {
-          limit,
-        },
-      },
-    );
+export type TopicPapersResponse = {
+  topic_id: number;
+  topic_name: string;
 
-  return response.data.results;
-}
+  page: number;
+  limit: number;
+
+  total: number;
+  total_pages: number;
+
+  has_previous: boolean;
+  has_next: boolean;
+
+  results: RecommendationPaper[];
+};
+
 
 // ============================================================
 // Trending Papers
@@ -31,9 +34,10 @@ export async function getSimilarPapers(
 
 export async function getTrendingPapers(
   limit = 10,
-): Promise<PaperDetail[]> {
+): Promise<RecommendationPaper[]> {
+
   const response =
-    await axiosClient.get<PaperDetail[]>(
+    await axiosClient.get<RecommendationPaper[]>(
       "/api/recommendations/trending",
       {
         params: {
@@ -43,21 +47,68 @@ export async function getTrendingPapers(
     );
 
   return response.data;
-} // Note: trending endpoint returns array directly, not wrapped in { results }
+}
+
 
 // ============================================================
-// Topic Recommendations
+// Emerging Topics
 // ============================================================
 
-export async function getTopicRecommendations(
+export async function getEmergingTopics(
+  limit = 10,
+): Promise<EmergingTopic[]> {
+
+  const response =
+    await axiosClient.get<EmergingTopic[]>(
+      "/api/recommendations/emerging-topics",
+      {
+        params: {
+          limit,
+        },
+      },
+    );
+
+  return response.data;
+}
+
+
+// ============================================================
+// Papers By Topic
+// ============================================================
+
+export async function getPapersByTopic(
+  topicId: number,
+  page = 1,
+  limit = 10,
+): Promise<TopicPapersResponse> {
+
+  const response =
+    await axiosClient.get<TopicPapersResponse>(
+      `/api/recommendations/topics/${topicId}/papers`,
+      {
+        params: {
+          page,
+          limit,
+        },
+      },
+    );
+
+  return response.data;
+}
+
+
+// ============================================================
+// Similar Papers
+// ============================================================
+
+export async function getSimilarPapers(
   paperId: number,
   limit = 10,
-): Promise<PaperDetail[]> {
+): Promise<RecommendationPaper[]> {
+
   const response =
-    await axiosClient.get<{
-      results: PaperDetail[];
-    }>(
-      `/api/recommendations/${paperId}/by-topic`,
+    await axiosClient.get<RecommendationListResponse>(
+      `/api/recommendations/papers/${paperId}/similar`,
       {
         params: {
           limit,
@@ -68,42 +119,19 @@ export async function getTopicRecommendations(
   return response.data.results;
 }
 
+
 // ============================================================
-// Author Recommendations
+// Similar Papers By Topic
 // ============================================================
 
-export async function getAuthorRecommendations(
-  paperId: number,
+export async function getSimilarPapersByTopic(
+  topicId: number,
   limit = 10,
-): Promise<PaperDetail[]> {
+): Promise<RecommendationPaper[]> {
+
   const response =
-    await axiosClient.get<{
-      results: PaperDetail[];
-    }>(
-      `/api/recommendations/${paperId}/by-author`,
-      {
-        params: {
-          limit,
-        },
-      },
-    );
-
-  return response.data.results;
-}
-
-// ============================================================
-// All Recommendations
-// ============================================================
-
-export async function getRecommendations(
-  paperId: number,
-  limit = 10,
-): Promise<PaperDetail[]> {
-  const response =
-    await axiosClient.get<{
-      results: PaperDetail[];
-    }>(
-      `/api/recommendations/${paperId}`,
+    await axiosClient.get<RecommendationListResponse>(
+      `/api/recommendations/topics/${topicId}/similar`,
       {
         params: {
           limit,

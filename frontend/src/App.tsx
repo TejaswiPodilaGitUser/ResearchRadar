@@ -11,6 +11,7 @@ import HomePage from "./pages/HomePage";
 import SearchPage from "./pages/SearchPage";
 import AuthorsPage from "./pages/AuthorsPage";
 import TopicsPage from "./pages/TopicsPage";
+import TopicDetailPage from "./pages/TopicDetailPage";
 import RecommendationsPage from "./pages/RecommendationsPage";
 import PaperDetailPage from "./pages/PaperDetailPage";
 import Metrics from "./pages/Metrics";
@@ -52,6 +53,11 @@ function App() {
           />
 
           <Route
+            path="/topics/:topicId"
+            element={<TopicDetailPage />}
+          />
+
+          <Route
             path="/recommendations"
             element={<RecommendationsPage />}
           />
@@ -79,3 +85,4 @@ function App() {
 }
 
 export default App;
+

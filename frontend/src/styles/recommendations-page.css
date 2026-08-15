@@ -1,0 +1,674 @@
+/* ============================================================
+   RECOMMENDATIONS PAGE
+   ============================================================ */
+
+.recommendations-page {
+  min-height: calc(100vh - 72px);
+
+  background: #f7f8fa;
+  color: #111827;
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+
+/* ============================================================
+   PAGE CONTAINER
+   ============================================================ */
+
+.recommendations-container {
+  width: min(1200px, calc(100% - 48px));
+
+  margin: 0 auto;
+
+  padding: 40px 0 64px;
+}
+
+
+/* ============================================================
+   HERO
+   ============================================================ */
+
+.recommendations-hero {
+  margin-bottom: 32px;
+}
+
+.recommendations-eyebrow {
+  margin-bottom: 8px;
+
+  color: #64748b;
+
+  font-size: 11px;
+  line-height: 1.4;
+  font-weight: 700;
+
+  letter-spacing: 0.12em;
+
+  text-transform: uppercase;
+}
+
+.recommendations-hero h1 {
+  margin: 0;
+
+  color: #111827;
+
+  font-size: 34px;
+  line-height: 1.25;
+  font-weight: 700;
+
+  letter-spacing: -0.02em;
+}
+
+.recommendations-hero p {
+  max-width: 680px;
+
+  margin: 10px 0 0;
+
+  color: #64748b;
+
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+
+/* ============================================================
+   ENTITY GRID RESET
+   ============================================================ */
+
+.recommendations-page .entity-grid {
+  display: block;
+
+  width: 100%;
+}
+
+
+/* ============================================================
+   RECOMMENDATION GRID
+   ============================================================ */
+
+.recommendation-grid {
+  width: 100%;
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+
+  gap: 20px;
+
+  align-items: stretch;
+}
+
+
+/* ============================================================
+   RECOMMENDATION CARD
+   ============================================================ */
+
+.recommendation-card {
+  width: 100%;
+  min-width: 0;
+  min-height: 210px;
+
+  display: flex;
+  flex-direction: column;
+
+  box-sizing: border-box;
+
+  margin: 0;
+  padding: 24px;
+
+  background: #ffffff;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+
+  color: #111827;
+
+  box-shadow:
+    0 1px 3px rgba(15, 23, 42, 0.04);
+
+  font-family: inherit;
+  font-size: inherit;
+  text-align: left;
+
+  cursor: pointer;
+  appearance: none;
+
+  text-decoration: none;
+
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+
+/* ============================================================
+   RECOMMENDATION CARD HOVER
+   ============================================================ */
+
+.recommendation-card:hover {
+  transform: translateY(-2px);
+
+  border-color: #cbd5e1;
+
+  box-shadow:
+    0 8px 24px rgba(15, 23, 42, 0.08);
+
+  text-decoration: none;
+}
+
+
+/* ============================================================
+   RECOMMENDATION ICON
+   ============================================================ */
+
+.recommendation-icon {
+  width: 44px;
+  height: 44px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  margin-bottom: 18px;
+
+  border-radius: 12px;
+
+  background: #f1f5f9;
+
+  font-size: 21px;
+  line-height: 1;
+}
+
+
+/* ============================================================
+   RECOMMENDATION TITLE
+   ============================================================ */
+
+.recommendation-card h2 {
+  margin: 0;
+
+  color: #111827;
+
+  font-size: 18px;
+  line-height: 1.4;
+
+  font-weight: 700;
+
+  letter-spacing: -0.01em;
+}
+
+
+/* ============================================================
+   RECOMMENDATION DESCRIPTION
+   ============================================================ */
+
+.recommendation-card p {
+  margin: 9px 0 0;
+
+  color: #64748b;
+
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+
+/* ============================================================
+   RECOMMENDATION ACTION
+   ============================================================ */
+
+.recommendation-action {
+  margin-top: auto;
+
+  padding-top: 18px;
+
+  color: #2563eb;
+
+  font-size: 13px;
+  line-height: 1.4;
+
+  font-weight: 600;
+}
+
+.recommendation-card:hover .recommendation-action {
+  color: #1d4ed8;
+}
+
+
+/* ============================================================
+   RECOMMENDATION CARD FOCUS
+   ============================================================ */
+
+.recommendation-card:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.18);
+
+  outline-offset: 3px;
+
+  border-radius: 16px;
+}
+
+
+/* ============================================================
+   BACK BUTTON
+   ============================================================ */
+
+.recommendation-back {
+  display: inline-flex;
+
+  align-items: center;
+
+  margin-bottom: 20px;
+
+  padding: 0;
+
+  border: 0;
+
+  background: transparent;
+
+  color: #475569;
+
+  font-family: inherit;
+
+  font-size: 13px;
+  line-height: 1.4;
+
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    color 0.15s ease;
+}
+
+.recommendation-back:hover {
+  color: #111827;
+}
+
+.recommendation-back:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.18);
+
+  outline-offset: 4px;
+
+  border-radius: 4px;
+}
+
+
+/* ============================================================
+   RESULTS GRID
+   ============================================================ */
+
+.recommendation-results {
+  width: 100%;
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 20px;
+
+  align-items: stretch;
+}
+
+
+/* ============================================================
+   RESULT CARD
+   ============================================================ */
+
+.recommendation-result {
+  width: 100%;
+  min-width: 0;
+  min-height: 180px;
+
+  display: flex;
+
+  box-sizing: border-box;
+
+  padding: 22px;
+
+  background: #ffffff;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+
+  color: #111827;
+
+  text-decoration: none;
+
+  box-shadow:
+    0 1px 3px rgba(15, 23, 42, 0.04);
+
+  cursor: pointer;
+
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+
+/* ============================================================
+   RESULT CARD LINK RESET
+   ============================================================ */
+
+.recommendation-result:link,
+.recommendation-result:visited {
+  color: #111827;
+
+  text-decoration: none;
+}
+
+
+/* ============================================================
+   RESULT CARD HOVER
+   ============================================================ */
+
+.recommendation-result:hover {
+  transform: translateY(-2px);
+
+  border-color: #cbd5e1;
+
+  color: #111827;
+
+  text-decoration: none;
+
+  box-shadow:
+    0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+
+/* ============================================================
+   RESULT CARD FOCUS
+   ============================================================ */
+
+.recommendation-result:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.18);
+
+  outline-offset: 3px;
+
+  border-radius: 16px;
+}
+
+
+/* ============================================================
+   RESULT RANK
+   ============================================================ */
+
+.recommendation-rank {
+  flex: 0 0 36px;
+
+  padding-top: 1px;
+
+  color: #94a3b8;
+
+  font-size: 16px;
+  line-height: 1.4;
+
+  font-weight: 700;
+}
+
+
+/* ============================================================
+   RESULT CONTENT
+   ============================================================ */
+
+.recommendation-result-content {
+  min-width: 0;
+
+  flex: 1;
+}
+
+
+/* ============================================================
+   RESULT LABEL
+   ============================================================ */
+
+.recommendation-card-label {
+  color: #94a3b8;
+
+  font-size: 10px;
+  line-height: 1.3;
+
+  font-weight: 700;
+
+  letter-spacing: 0.1em;
+
+  text-transform: uppercase;
+}
+
+
+/* ============================================================
+   RESULT ID
+   ============================================================ */
+
+.recommendation-card-id {
+  display: inline-flex;
+
+  align-items: center;
+
+  margin-top: 4px;
+
+  padding: 4px 8px;
+
+  border-radius: 8px;
+
+  background: #f1f5f9;
+
+  color: #64748b;
+
+  font-size: 11px;
+  line-height: 1.3;
+
+  font-weight: 700;
+}
+
+
+/* ============================================================
+   RESULT TITLE
+   ============================================================ */
+
+.recommendation-result-content h2 {
+  margin: 9px 0 0;
+
+  color: #111827;
+
+  font-size: 17px;
+  line-height: 1.45;
+
+  font-weight: 700;
+
+  letter-spacing: -0.01em;
+
+  overflow-wrap: anywhere;
+
+  display: -webkit-box;
+
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+
+  -webkit-box-orient: vertical;
+
+  overflow: hidden;
+}
+
+
+/* ============================================================
+   RESULT META
+   ============================================================ */
+
+.recommendation-card-meta {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: 8px 18px;
+
+  margin-top: 14px;
+
+  color: #64748b;
+
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.recommendation-card-meta span {
+  white-space: nowrap;
+}
+
+
+/* ============================================================
+   LOADING / ERROR / EMPTY
+   ============================================================ */
+
+.recommendation-loading,
+.recommendation-error,
+.recommendation-empty {
+  width: 100%;
+
+  box-sizing: border-box;
+
+  padding: 64px 24px;
+
+  background: #ffffff;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+
+  box-shadow:
+    0 1px 3px rgba(15, 23, 42, 0.04);
+
+  text-align: center;
+
+  color: #64748b;
+
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+
+/* ============================================================
+   ERROR
+   ============================================================ */
+
+.recommendation-error {
+  color: #b91c1c;
+
+  background: #fffafa;
+
+  border-color: #fecaca;
+}
+
+
+/* ============================================================
+   RESPONSIVE — TABLET
+   ============================================================ */
+
+@media (max-width: 950px) {
+
+  .recommendation-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .recommendation-results {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+
+/* ============================================================
+   RESPONSIVE — MOBILE
+   ============================================================ */
+
+@media (max-width: 700px) {
+
+  .recommendations-container {
+    width: min(
+      100% - 32px,
+      1200px
+    );
+
+    padding-top: 28px;
+  }
+
+  .recommendations-hero h1 {
+    font-size: 30px;
+  }
+
+  .recommendations-hero p {
+    font-size: 14px;
+  }
+
+  .recommendation-grid {
+    grid-template-columns: 1fr;
+
+    gap: 16px;
+  }
+
+  .recommendation-results {
+    grid-template-columns: 1fr;
+
+    gap: 16px;
+  }
+
+  .recommendation-card {
+    min-height: 200px;
+
+    padding: 22px;
+  }
+
+  .recommendation-result {
+    min-height: 175px;
+
+    padding: 20px;
+  }
+}
+
+
+/* ============================================================
+   RESPONSIVE — SMALL MOBILE
+   ============================================================ */
+
+@media (max-width: 450px) {
+
+  .recommendations-container {
+    width: calc(100% - 24px);
+  }
+
+  .recommendations-hero h1 {
+    font-size: 28px;
+  }
+
+  .recommendation-card {
+    padding: 20px;
+  }
+
+  .recommendation-result {
+    padding: 18px;
+  }
+
+  .recommendation-rank {
+    flex-basis: 32px;
+  }
+}
+
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+
+  .recommendation-card,
+  .recommendation-result,
+  .recommendation-action,
+  .recommendation-back {
+    transition: none;
+  }
+}

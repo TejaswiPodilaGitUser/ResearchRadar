@@ -21,6 +21,7 @@ import LoadingState from "../components/common/LoadingState";
 import ErrorState from "../components/common/ErrorState";
 
 import "../styles/entity-page.css";
+import "../styles/topic-page.css";
 
 // ============================================================
 // Topic Detail Page

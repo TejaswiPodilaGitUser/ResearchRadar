@@ -25,7 +25,6 @@ import type {
   PaperSearchParams,
 } from "../types/paper";
 
-import "../styles/search-page.css";
 
 // ============================================================
 // Types

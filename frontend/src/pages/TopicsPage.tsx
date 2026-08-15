@@ -6,7 +6,7 @@ import {
   useNavigate,
 } from "react-router-dom";
 
-import "../styles/entity-page.css";
+import "../styles/topic-page.css";
 
 import {
   getTopics,
