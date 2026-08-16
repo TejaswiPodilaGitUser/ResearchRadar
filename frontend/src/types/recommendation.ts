@@ -1,47 +1,60 @@
-import type {
-  Author,
-  Topic,
-} from "./paper";
+// ============================================================
+// Recommendation Paper
+// ============================================================
 
-
-export interface RecommendationPaper {
+export type RecommendationPaper = {
   paper_id: number;
   paper_name: string;
-
-  abstract?: string | null;
-
-  publication_year?: number | null;
-
-  publication_date?: string | null;
-
-  doi?: string | null;
-
-  cited_by_count?: number | null;
-
-  authors: Author[];
-
-  topics: Topic[];
-}
+  publication_year: number | null;
+  cited_by_count: number;
+};
 
 
-export interface RecommendationListResponse {
-  results: RecommendationPaper[];
-}
+// ============================================================
+// Emerging Topic
+// ============================================================
 
-
-export interface EmergingTopic {
+export type EmergingTopic = {
   topic_id: number;
   topic_name: string;
 
   paper_count: number;
-
   recent_paper_count: number;
-
   citation_count: number;
-}
+};
 
 
-// Backwards-compatible alias
+// ============================================================
+// Top Author
+// ============================================================
 
-export type RecommendationPaperResponse =
-  RecommendationPaper;
+export type TopAuthor = {
+  author_id: number;
+  author_name: string;
+
+  paper_count: number;
+  citation_count: number;
+};
+
+
+
+
+// ============================================================
+// Topic Papers Response
+// ============================================================
+
+export type TopicPapersResponse = {
+  topic_id: number;
+  topic_name: string;
+
+  page: number;
+  limit: number;
+
+  total: number;
+  total_pages: number;
+
+  has_previous: boolean;
+  has_next: boolean;
+
+  results: RecommendationPaper[];
+};

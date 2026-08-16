@@ -3,6 +3,7 @@ from typing import List, Optional
 from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
 
+from app.models.author import Author
 from app.models.paper import Paper
 from app.models.topic import Topic
 
@@ -25,44 +26,6 @@ def get_paper_by_id(
             Paper.id == paper_id
         )
         .first()
-    )
-
-
-# ============================================================
-# Find Similar Papers
-# ============================================================
-
-def find_similar_papers(
-    db: Session,
-    paper: Paper,
-    limit: int,
-) -> List[Paper]:
-    """
-    Find papers using semantic similarity.
-
-    Uses pgvector cosine distance.
-    """
-
-    if paper.embedding is None:
-        return []
-
-    cosine_distance = (
-        Paper.embedding.cosine_distance(
-            paper.embedding
-        )
-    )
-
-    return (
-        db.query(Paper)
-        .filter(
-            Paper.embedding.is_not(None),
-            Paper.id != paper.id,
-        )
-        .order_by(
-            cosine_distance.asc()
-        )
-        .limit(limit)
-        .all()
     )
 
 
@@ -99,6 +62,63 @@ def find_trending_papers(
 
 
 # ============================================================
+# Top Authors
+# ============================================================
+
+def find_top_authors(
+    db: Session,
+    limit: int = 10,
+):
+    """
+    Find the top authors with multiple papers.
+
+    Ranking:
+        1. Number of papers
+        2. Total citations
+        3. Author ID
+
+    Authors with only one paper are excluded.
+    """
+
+    paper_count = func.count(
+        Paper.id
+    )
+
+    citation_count = func.coalesce(
+        func.sum(
+            Paper.cited_by_count
+        ),
+        0,
+    )
+
+    return (
+        db.query(
+            Author.id.label("author_id"),
+            Author.name.label("author_name"),
+            paper_count.label("paper_count"),
+            citation_count.label("citation_count"),
+        )
+        .join(
+            Author.papers
+        )
+        .group_by(
+            Author.id,
+            Author.name,
+        )
+        .having(
+            paper_count > 1
+        )
+        .order_by(
+            desc(paper_count),
+            desc(citation_count),
+            Author.id.desc(),
+        )
+        .limit(limit)
+        .all()
+    )
+
+
+# ============================================================
 # Find Emerging Topics
 # ============================================================
 
@@ -115,7 +135,9 @@ def find_emerging_topics(
 
     recent_year = (
         db.query(
-            func.max(Paper.publication_year)
+            func.max(
+                Paper.publication_year
+            )
         )
         .filter(
             Paper.publication_year.is_not(None)
@@ -182,7 +204,7 @@ def find_emerging_topics(
 
 
 # ============================================================
-# Count Papers By Topic
+# Count Papers By Topic ID
 # ============================================================
 
 def count_papers_by_topic_id(

@@ -1,300 +1,299 @@
-from math import ceil
-from typing import List, Optional
+from typing import Optional
 
+from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
 
+from app.models.author import Author
 from app.models.paper import Paper
+from app.models.topic import Topic
 
-from app.schemas.recommendation_schema import (
-    RecommendationAuthorResponse,
-    RecommendationPaperResponse,
-    RecommendationTopicResponse,
-    TrendingPaperResponse,
-)
-
-from app.database.queries.recommendation_queries import (
-    count_papers_by_topic_id,
-    find_papers_by_topic_id,
-    find_similar_papers,
-    find_trending_papers,
-    get_paper_by_id,
-)
+# IMPORTANT:
+# Do NOT import app.models.paper_author.
+#
+# The project does not have that module.
+# The Paper <-> Author relationship is already available
+# through Paper.authors / Author.papers.
 
 
 # ============================================================
-# Constants
+# Recommendation Service
 # ============================================================
-
-DEFAULT_PAGE = 1
-DEFAULT_PAGE_SIZE = 10
-MAX_PAGE_SIZE = 20
-
-DEFAULT_RECOMMENDATION_LIMIT = 10
-MAX_RECOMMENDATION_LIMIT = 20
 
 
 class RecommendationService:
+    """
+    Central recommendation service.
+
+    Owns:
+        - Trending papers
+        - Top authors
+        - Topics
+        - Papers by topic
+
+    Does NOT modify:
+        - PaperDetailPage
+        - Similar-paper recommendation flow
+        - AuthorRecommendationService
+        - TopicRecommendationService
+        - Existing paper services
+    """
 
     # ========================================================
-    # Get Paper
+    # Trending Papers
     # ========================================================
 
-    @staticmethod
-    def get_paper(
-        db: Session,
-        paper_id: int,
-    ) -> Optional[Paper]:
-
-        return get_paper_by_id(
-            db=db,
-            paper_id=paper_id,
-        )
-
-    # ========================================================
-    # Author Mapping
-    # ========================================================
-
-    @staticmethod
-    def map_author(
-        author,
-    ) -> RecommendationAuthorResponse:
-
-        return RecommendationAuthorResponse(
-            author_id=author.id,
-            author_name=author.name,
-        )
-
-    # ========================================================
-    # Topic Mapping
-    # ========================================================
-
-    @staticmethod
-    def map_topic(
-        topic,
-    ) -> RecommendationTopicResponse:
-
-        return RecommendationTopicResponse(
-            topic_id=topic.id,
-            topic_name=topic.name,
-        )
-
-    # ========================================================
-    # Paper Mapping
-    # ========================================================
-
-    @classmethod
-    def map_paper(
-        cls,
-        paper: Paper,
-    ) -> RecommendationPaperResponse:
-
-        return RecommendationPaperResponse(
-            paper_id=paper.id,
-            paper_name=paper.title,
-            abstract=paper.abstract,
-            publication_year=paper.publication_year,
-            publication_date=(
-                paper.publication_date.isoformat()
-                if paper.publication_date
-                else None
-            ),
-            doi=paper.doi,
-            cited_by_count=paper.cited_by_count,
-            authors=[
-                cls.map_author(author)
-                for author in paper.authors
-            ],
-            topics=[
-                cls.map_topic(topic)
-                for topic in paper.topics
-            ],
-        )
-
-    # ========================================================
-    # Multiple Papers Mapping
-    # ========================================================
-
-    @classmethod
-    def map_papers(
-        cls,
-        papers: List[Paper],
-    ) -> List[RecommendationPaperResponse]:
-
-        return [
-            cls.map_paper(paper)
-            for paper in papers
-        ]
-
-    # ========================================================
-    # Trending Mapping
-    # ========================================================
-
-    @staticmethod
-    def map_trending_paper(
-        paper: Paper,
-    ) -> TrendingPaperResponse:
-
-        return TrendingPaperResponse(
-            paper_id=paper.id,
-            paper_name=paper.title,
-            publication_year=paper.publication_year,
-            cited_by_count=paper.cited_by_count,
-        )
-
-    @classmethod
-    def map_trending_papers(
-        cls,
-        papers: List[Paper],
-    ) -> List[TrendingPaperResponse]:
-
-        return [
-            cls.map_trending_paper(paper)
-            for paper in papers
-        ]
-
-    # ========================================================
-    # Similar Papers
-    # ========================================================
-
-    def get_similar(
+    def get_trending(
         self,
         db: Session,
-        paper_id: int,
-        limit: int,
-    ) -> Optional[List[RecommendationPaperResponse]]:
+        limit: int = 10,
+    ):
+        """
+        Return the top trending papers.
 
-        paper = self.get_paper(
-            db=db,
-            paper_id=paper_id,
+        Ranking:
+            1. Citation count DESC
+            2. Publication year DESC
+            3. Paper ID DESC
+
+        IMPORTANT:
+        Return ORM Paper objects here.
+        The API schema is responsible for exposing only
+        safe fields and excluding embedding.
+        """
+
+        limit = max(1, min(limit, 10))
+
+        return (
+            db.query(Paper)
+            .filter(
+                Paper.cited_by_count.isnot(None),
+            )
+            .order_by(
+                desc(Paper.cited_by_count),
+                desc(Paper.publication_year),
+                desc(Paper.id),
+            )
+            .limit(limit)
+            .all()
         )
 
-        if paper is None:
-            return None
+    # ========================================================
+    # Top Authors
+    # ========================================================
 
-        if paper.embedding is None:
-            return []
+    def get_top_authors(
+        self,
+        db: Session,
+        limit: int = 10,
+    ):
+        """
+        Return the top authors.
 
-        limit = max(
-            1,
-            min(
-                limit,
-                MAX_RECOMMENDATION_LIMIT,
+        Authors with only one paper are excluded.
+
+        Ranking:
+            1. Number of papers DESC
+            2. Total citations DESC
+            3. Author name ASC
+
+        Uses the existing SQLAlchemy relationship instead of
+        importing a non-existent PaperAuthor model.
+        """
+
+        limit = max(1, min(limit, 10))
+
+        paper_count = func.count(
+            func.distinct(Paper.id)
+        )
+
+        citation_count = func.coalesce(
+            func.sum(
+                func.coalesce(
+                    Paper.cited_by_count,
+                    0,
+                )
             ),
+            0,
         )
 
-        papers = find_similar_papers(
-            db=db,
-            paper=paper,
-            limit=limit,
+        results = (
+            db.query(
+                Author.id.label("author_id"),
+                Author.name.label("author_name"),
+                paper_count.label("paper_count"),
+                citation_count.label("citation_count"),
+            )
+            .join(
+                Author.papers,
+            )
+            .group_by(
+                Author.id,
+                Author.name,
+            )
+            .having(
+                paper_count > 1,
+            )
+            .order_by(
+                desc(paper_count),
+                desc(citation_count),
+                Author.name.asc(),
+            )
+            .limit(limit)
+            .all()
         )
 
-        return self.map_papers(papers)
+        return [
+            {
+                "author_id": row.author_id,
+                "author_name": row.author_name,
+                "paper_count": row.paper_count,
+                "citation_count": row.citation_count,
+            }
+            for row in results
+        ]
 
     # ========================================================
-    # Count Topic Papers
+    # Topic
     # ========================================================
 
-    def get_topic_paper_count(
+    def get_topic(
         self,
         db: Session,
         topic_id: int,
-    ) -> Optional[int]:
+    ) -> Optional[Topic]:
+        """
+        Return a topic by ID.
+        """
 
-        return count_papers_by_topic_id(
-            db=db,
-            topic_id=topic_id,
+        return (
+            db.query(Topic)
+            .filter(
+                Topic.id == topic_id,
+            )
+            .first()
         )
 
     # ========================================================
-    # Paginated Topic Papers
+    # Topics
+    # ========================================================
+
+    def get_topics(
+        self,
+        db: Session,
+        limit: int = 10,
+    ):
+        """
+        Return topics ordered by the number of associated papers.
+
+        This powers:
+            Papers by Topic
+        """
+
+        limit = max(1, min(limit, 10))
+
+        paper_count = func.count(
+            func.distinct(Paper.id)
+        )
+
+        return (
+            db.query(
+                Topic.id.label("topic_id"),
+                Topic.name.label("topic_name"),
+                paper_count.label("paper_count"),
+            )
+            .join(
+                Topic.papers,
+            )
+            .group_by(
+                Topic.id,
+                Topic.name,
+            )
+            .order_by(
+                desc(paper_count),
+                Topic.name.asc(),
+            )
+            .limit(limit)
+            .all()
+        )
+
+    # ========================================================
+    # Topic Papers
     # ========================================================
 
     def get_by_topic(
         self,
         db: Session,
         topic_id: int,
-        page: int = DEFAULT_PAGE,
-        page_size: int = DEFAULT_PAGE_SIZE,
-    ) -> Optional[dict]:
+        page: int = 1,
+        page_size: int = 10,
+    ):
+        """
+        Return paginated papers belonging to a topic.
 
-        page = max(
-            page,
-            DEFAULT_PAGE,
+        Ranking:
+            1. Publication year DESC
+            2. Citation count DESC
+            3. Paper ID DESC
+
+        The query only returns the requested page.
+        """
+
+        page = max(1, page)
+        page_size = max(1, min(page_size, 10))
+
+        topic = self.get_topic(
+            db,
+            topic_id,
         )
 
-        page_size = max(
-            1,
-            min(
-                page_size,
-                MAX_PAGE_SIZE,
-            ),
-        )
-
-        total = self.get_topic_paper_count(
-            db=db,
-            topic_id=topic_id,
-        )
-
-        if total is None:
+        if topic is None:
             return None
 
+        base_query = (
+            db.query(Paper)
+            .join(
+                Paper.topics,
+            )
+            .filter(
+                Topic.id == topic_id,
+            )
+        )
+
+        total = base_query.count()
+
         total_pages = (
-            ceil(total / page_size)
+            (total + page_size - 1) // page_size
             if total > 0
             else 0
         )
 
-        papers = find_papers_by_topic_id(
-            db=db,
-            topic_id=topic_id,
-            page=page,
-            limit=page_size,
+        offset = (
+            page - 1
+        ) * page_size
+
+        papers = (
+            base_query
+            .order_by(
+                desc(Paper.publication_year),
+                desc(Paper.cited_by_count),
+                desc(Paper.id),
+            )
+            .offset(offset)
+            .limit(page_size)
+            .all()
         )
 
-        if papers is None:
-            return None
-
         return {
+            "topic_id": topic.id,
+            "topic_name": topic.name,
             "page": page,
             "limit": page_size,
             "total": total,
             "total_pages": total_pages,
             "has_previous": page > 1,
             "has_next": page < total_pages,
-            "results": self.map_papers(
-                papers
-            ),
+            "results": papers,
         }
-
-    # ========================================================
-    # Trending
-    # ========================================================
-
-    def get_trending(
-        self,
-        db: Session,
-        limit: int = DEFAULT_RECOMMENDATION_LIMIT,
-    ) -> List[TrendingPaperResponse]:
-
-        # Trending Research is intentionally limited
-        # to the Top 10 by default.
-
-        limit = max(
-            1,
-            min(
-                limit,
-                MAX_RECOMMENDATION_LIMIT,
-            ),
-        )
-
-        papers = find_trending_papers(
-            db=db,
-            limit=limit,
-        )
-
-        return self.map_trending_papers(
-            papers
-        )
 
 
 # ============================================================
