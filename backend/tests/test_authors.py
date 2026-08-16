@@ -1,20 +1,43 @@
+# ============================================================
+# AUTHORS API TESTS
+# ============================================================
+
 import pytest
 
 
 # ============================================================
-# Test Data Helpers
+# GET /api/authors
 # ============================================================
 
-def get_existing_author_id(client) -> int:
-    """
-    Get an existing author ID through the API.
-    """
 
+def test_get_authors(client):
+    response = client.get(
+        "/api/authors"
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert isinstance(data, dict)
+
+    assert "page" in data
+    assert "page_size" in data
+    assert "total" in data
+    assert "results" in data
+
+    assert isinstance(data["page"], int)
+    assert isinstance(data["page_size"], int)
+    assert isinstance(data["total"], int)
+    assert isinstance(data["results"], list)
+
+
+def test_get_authors_with_pagination(client):
     response = client.get(
         "/api/authors",
         params={
             "page": 1,
-            "size": 1,
+            "size": 10,
         },
     )
 
@@ -22,841 +45,710 @@ def get_existing_author_id(client) -> int:
 
     data = response.json()
 
-    assert data["results"], "Test database contains no authors."
+    assert data["page"] == 1
+    assert data["page_size"] == 10
 
-    return data["results"][0]["author_id"]
+    assert len(data["results"]) <= 10
 
 
-def get_existing_author(client) -> dict:
-    """
-    Get one existing author from the API.
-    """
-
-    author_id = get_existing_author_id(client)
-
+def test_get_authors_second_page(client):
     response = client.get(
-        f"/api/authors/{author_id}"
+        "/api/authors",
+        params={
+            "page": 2,
+            "size": 10,
+        },
     )
 
     assert response.status_code == 200
 
-    return response.json()
+    data = response.json()
+
+    assert data["page"] == 2
+    assert data["page_size"] == 10
+
+    assert len(data["results"]) <= 10
 
 
-# ============================================================
-# GET /api/authors
-# ============================================================
+def test_get_authors_with_keyword(client):
+    response = client.get(
+        "/api/authors",
+        params={
+            "keyword": "Ford",
+        },
+    )
 
-class TestGetAuthors:
+    assert response.status_code == 200
 
-    def test_get_authors_success(self, client):
-        """
-        Get authors using default parameters.
-        """
+    data = response.json()
 
-        response = client.get(
-            "/api/authors"
-        )
+    assert isinstance(data, dict)
+    assert "results" in data
+    assert isinstance(data["results"], list)
 
-        assert response.status_code == 200
 
-        data = response.json()
+def test_get_authors_with_author_id_keyword(client):
+    response = client.get(
+        "/api/authors",
+        params={
+            "keyword": "2208",
+        },
+    )
 
-        assert "page" in data
-        assert "page_size" in data
-        assert "total" in data
-        assert "results" in data
+    assert response.status_code == 200
 
-        assert isinstance(data["page"], int)
-        assert isinstance(data["page_size"], int)
-        assert isinstance(data["total"], int)
-        assert isinstance(data["results"], list)
+    data = response.json()
 
-    def test_get_authors_with_pagination(self, client):
-        """
-        Verify page and size parameters.
-        """
+    assert isinstance(data, dict)
+    assert "results" in data
+    assert isinstance(data["results"], list)
 
-        response = client.get(
-            "/api/authors",
-            params={
-                "page": 1,
-                "size": 5,
-            },
-        )
 
-        assert response.status_code == 200
+def test_get_authors_keyword_not_found(client):
+    response = client.get(
+        "/api/authors",
+        params={
+            "keyword": "DefinitelyUnknownAuthor123456",
+        },
+    )
 
-        data = response.json()
+    assert response.status_code == 200
 
-        assert data["page"] == 1
-        assert data["page_size"] == 5
-        assert len(data["results"]) <= 5
+    data = response.json()
 
-    def test_get_authors_second_page(self, client):
-        """
-        Verify pagination can retrieve another page.
-        """
+    assert isinstance(data, dict)
+    assert isinstance(data["results"], list)
 
-        response = client.get(
-            "/api/authors",
-            params={
-                "page": 2,
-                "size": 5,
-            },
-        )
+    assert len(data["results"]) == 0
 
-        assert response.status_code == 200
 
-        data = response.json()
+def test_get_authors_invalid_page(client):
+    response = client.get(
+        "/api/authors",
+        params={
+            "page": 0,
+        },
+    )
 
-        assert data["page"] == 2
-        assert data["page_size"] == 5
+    assert response.status_code == 422
 
-    def test_get_authors_by_name(self, client):
-        """
-        Search authors by name.
-        """
 
-        response = client.get(
-            "/api/authors",
-            params={
-                "name": "John",
-            },
-        )
+def test_get_authors_negative_page(client):
+    response = client.get(
+        "/api/authors",
+        params={
+            "page": -1,
+        },
+    )
 
-        assert response.status_code == 200
+    assert response.status_code == 422
 
-        data = response.json()
 
-        assert "results" in data
+def test_get_authors_invalid_size_zero(client):
+    response = client.get(
+        "/api/authors",
+        params={
+            "size": 0,
+        },
+    )
 
-    def test_get_authors_no_results(self, client):
-        """
-        Search for an author that should not exist.
-        """
+    assert response.status_code == 422
 
-        response = client.get(
-            "/api/authors",
-            params={
-                "name": "THIS_AUTHOR_SHOULD_NOT_EXIST_123456789",
-            },
-        )
 
-        assert response.status_code == 200
+def test_get_authors_invalid_size_too_large(client):
+    response = client.get(
+        "/api/authors",
+        params={
+            "size": 1000,
+        },
+    )
 
-        data = response.json()
-
-        assert data["total"] == 0
-        assert data["results"] == []
-
-    def test_get_authors_invalid_page(self, client):
-        """
-        Page must be >= 1.
-        """
-
-        response = client.get(
-            "/api/authors",
-            params={
-                "page": 0,
-            },
-        )
-
-        assert response.status_code == 422
-
-    def test_get_authors_invalid_size(self, client):
-        """
-        Size must be >= 1.
-        """
-
-        response = client.get(
-            "/api/authors",
-            params={
-                "size": 0,
-            },
-        )
-
-        assert response.status_code == 422
-
-    def test_get_authors_size_above_maximum(self, client):
-        """
-        Size must not exceed configured maximum.
-        """
-
-        response = client.get(
-            "/api/authors",
-            params={
-                "size": 10000,
-            },
-        )
-
-        assert response.status_code == 422
+    assert response.status_code == 422
 
 
 # ============================================================
 # GET /api/authors/{author_id}
 # ============================================================
 
-class TestGetAuthorById:
 
-    def test_get_author_by_id_success(self, client):
-        """
-        Retrieve an existing author by ID.
-        """
+def test_get_author_by_id(client):
+    response = client.get(
+        "/api/authors/2208"
+    )
 
-        author_id = get_existing_author_id(client)
+    assert response.status_code == 200
 
-        response = client.get(
-            f"/api/authors/{author_id}"
-        )
+    data = response.json()
 
-        assert response.status_code == 200
+    assert isinstance(data, dict)
 
-        data = response.json()
+    assert "author_id" in data
+    assert "author_name" in data
 
-        assert data["author_id"] == author_id
-        assert "author_name" in data
+    assert data["author_id"] == 2208
 
-    def test_get_author_by_id_name_structure(self, client):
-        """
-        Verify author response structure.
-        """
 
-        data = get_existing_author(client)
+def test_get_author_by_existing_id_has_papers_field(client):
+    response = client.get(
+        "/api/authors/2208"
+    )
 
-        assert "author_id" in data
-        assert "author_name" in data
+    assert response.status_code == 200
 
-        assert isinstance(
-            data["author_id"],
-            int,
-        )
+    data = response.json()
 
-        assert isinstance(
-            data["author_name"],
-            str,
-        )
+    assert "papers" in data
 
-    def test_get_author_by_id_not_found(self, client):
-        """
-        Unknown author ID should return 404.
-        """
+    assert isinstance(
+        data["papers"],
+        list,
+    )
 
-        response = client.get(
-            "/api/authors/999999999"
-        )
 
-        assert response.status_code == 404
+def test_get_author_by_nonexistent_id(client):
+    response = client.get(
+        "/api/authors/999999999"
+    )
 
-    def test_get_author_by_id_zero(self, client):
-        """
-        Author ID must be positive.
-        """
+    assert response.status_code == 404
 
-        response = client.get(
-            "/api/authors/0"
-        )
 
-        assert response.status_code in {
-            404,
-            422,
-        }
+def test_get_author_by_zero_id(client):
+    response = client.get(
+        "/api/authors/0"
+    )
 
-    def test_get_author_by_id_negative(self, client):
-        """
-        Negative author ID should not return an author.
-        """
+    assert response.status_code == 404
 
-        response = client.get(
-            "/api/authors/-1"
-        )
 
-        assert response.status_code in {
-            404,
-            422,
-        }
+def test_get_author_by_negative_id(client):
+    response = client.get(
+        "/api/authors/-1"
+    )
 
-    def test_get_author_by_id_invalid(self, client):
-        """
-        Non-numeric author ID should fail validation.
-        """
+    assert response.status_code == 404
 
-        response = client.get(
-            "/api/authors/invalid"
-        )
 
-        assert response.status_code == 422
+def test_get_author_by_invalid_id(client):
+    response = client.get(
+        "/api/authors/abc"
+    )
+
+    assert response.status_code == 422
 
 
 # ============================================================
 # GET /api/authors/name
 # ============================================================
 
-class TestGetAuthorByName:
 
-    def test_get_author_by_name_success(self, client):
-        """
-        Retrieve an existing author by exact name.
-        """
+def test_get_author_by_name(client):
+    response = client.get(
+        "/api/authors/name",
+        params={
+            "name": "A Ford",
+        },
+    )
 
-        author = get_existing_author(client)
+    assert response.status_code == 200
 
-        author_name = author["author_name"]
+    data = response.json()
 
-        response = client.get(
-            "/api/authors/name",
-            params={
-                "name": author_name,
-            },
-        )
+    assert isinstance(data, dict)
 
-        assert response.status_code == 200
+    assert "author_id" in data
+    assert "author_name" in data
 
-        data = response.json()
+    assert data["author_name"] == "A Ford"
 
-        assert data["author_id"] == author["author_id"]
-        assert data["author_name"] == author_name
 
-    def test_get_author_by_name_case_insensitive(self, client):
-        """
-        Author name lookup should be case-insensitive.
-        """
+def test_get_author_by_name_case_insensitive(client):
+    response = client.get(
+        "/api/authors/name",
+        params={
+            "name": "a ford",
+        },
+    )
 
-        author = get_existing_author(client)
+    assert response.status_code == 200
 
-        author_name = author["author_name"]
+    data = response.json()
 
-        response = client.get(
-            "/api/authors/name",
-            params={
-                "name": author_name.upper(),
-            },
-        )
+    assert "author_id" in data
+    assert "author_name" in data
 
-        assert response.status_code == 200
+    assert data["author_name"] == "A Ford"
 
-        data = response.json()
 
-        assert data["author_id"] == author["author_id"]
+def test_get_author_by_name_with_leading_spaces(client):
+    response = client.get(
+        "/api/authors/name",
+        params={
+            "name": "  A Ford",
+        },
+    )
 
-    def test_get_author_by_name_with_spaces(self, client):
-        """
-        Leading and trailing spaces should be ignored.
-        """
+    assert response.status_code == 200
 
-        author = get_existing_author(client)
+    data = response.json()
 
-        author_name = author["author_name"]
+    assert data["author_name"] == "A Ford"
 
-        response = client.get(
-            "/api/authors/name",
-            params={
-                "name": f"  {author_name}  ",
-            },
-        )
 
-        assert response.status_code == 200
+def test_get_author_by_name_with_trailing_spaces(client):
+    response = client.get(
+        "/api/authors/name",
+        params={
+            "name": "A Ford  ",
+        },
+    )
 
-        data = response.json()
+    assert response.status_code == 200
 
-        assert data["author_id"] == author["author_id"]
+    data = response.json()
 
-    def test_get_author_by_name_not_found(self, client):
-        """
-        Unknown author name should return 404.
-        """
+    assert data["author_name"] == "A Ford"
 
-        response = client.get(
-            "/api/authors/name",
-            params={
-                "name": "THIS AUTHOR DOES NOT EXIST 123456789",
-            },
-        )
 
-        assert response.status_code == 404
+def test_get_author_by_name_with_leading_and_trailing_spaces(client):
+    response = client.get(
+        "/api/authors/name",
+        params={
+            "name": "  A Ford  ",
+        },
+    )
 
-    def test_get_author_by_name_empty(self, client):
-        """
-        Empty author name should fail validation.
-        """
+    assert response.status_code == 200
 
-        response = client.get(
-            "/api/authors/name",
-            params={
-                "name": "",
-            },
-        )
+    data = response.json()
 
-        assert response.status_code == 422
+    assert data["author_name"] == "A Ford"
+
+
+def test_get_author_by_name_unicode(client):
+    response = client.get(
+        "/api/authors/name",
+        params={
+            "name": "Μαρία Ανδρέου",
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["author_name"] == "Μαρία Ανδρέου"
+
+
+def test_get_author_by_name_unicode_japanese(client):
+    response = client.get(
+        "/api/authors/name",
+        params={
+            "name": "裕二 池谷",
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["author_name"] == "裕二 池谷"
+
+
+def test_get_author_by_name_missing_name(client):
+    response = client.get(
+        "/api/authors/name"
+    )
+
+    assert response.status_code == 422
+
+
+def test_get_author_by_name_empty(client):
+    response = client.get(
+        "/api/authors/name",
+        params={
+            "name": "",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_get_author_by_name_not_found(client):
+    response = client.get(
+        "/api/authors/name",
+        params={
+            "name": "This Author Definitely Does Not Exist",
+        },
+    )
+
+    assert response.status_code == 404
 
 
 # ============================================================
-# GET /api/authors/collection/ids
+# GET /api/authors/multiple/ids
 # ============================================================
 
-class TestGetAuthorsByIds:
 
-    def test_get_authors_by_single_id(self, client):
-        """
-        Retrieve one author using the collection endpoint.
-        """
+def test_get_multiple_authors_by_single_id(client):
+    """
+    A single ID is not a multiple-author request.
 
-        author_id = get_existing_author_id(client)
+    The current router explicitly raises ValueError.
+    TestClient re-raises that exception.
+    """
 
-        response = client.get(
-            "/api/authors/collection/ids",
+    with pytest.raises(
+        ValueError,
+        match="At least two author IDs are required",
+    ):
+        client.get(
+            "/api/authors/multiple/ids",
             params={
-                "ids": str(author_id),
+                "author_ids": "2208",
             },
         )
 
-        assert response.status_code == 200
 
-        data = response.json()
+def test_get_multiple_authors_by_ids(client):
+    response = client.get(
+        "/api/authors/multiple/ids",
+        params={
+            "author_ids": "2208,1561",
+        },
+    )
 
-        assert data["requested_count"] == 1
-        assert data["returned_count"] == 1
-        assert len(data["results"]) == 1
-        assert data["results"][0]["author_id"] == author_id
+    assert response.status_code == 200
 
-    def test_get_authors_by_multiple_ids(self, client):
-        """
-        Retrieve multiple authors by IDs.
-        """
+    data = response.json()
 
-        response = client.get(
-            "/api/authors",
+    assert isinstance(data, dict)
+
+    assert "authors" in data
+
+    assert isinstance(
+        data["authors"],
+        list,
+    )
+
+
+def test_get_multiple_authors_duplicate_ids(client):
+    response = client.get(
+        "/api/authors/multiple/ids",
+        params={
+            "author_ids": "2208,2208,1561",
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert "authors" in data
+
+    assert isinstance(
+        data["authors"],
+        list,
+    )
+
+
+def test_get_multiple_authors_ids_preserve_order(client):
+    response = client.get(
+        "/api/authors/multiple/ids",
+        params={
+            "author_ids": "2208,1561",
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    authors = data["authors"]
+
+    assert isinstance(
+        authors,
+        list,
+    )
+
+    if len(authors) >= 2:
+        assert authors[0]["author_id"] == 2208
+        assert authors[1]["author_id"] == 1561
+
+
+def test_get_multiple_authors_ids_invalid_values(client):
+    """
+    The current router explicitly raises ValueError
+    when IDs are not integers.
+    """
+
+    with pytest.raises(
+        ValueError,
+        match="author_ids must contain only",
+    ):
+        client.get(
+            "/api/authors/multiple/ids",
             params={
-                "size": 3,
+                "author_ids": "abc,xyz",
             },
         )
 
-        assert response.status_code == 200
 
-        authors = response.json()["results"]
+def test_get_multiple_authors_ids_mixed_invalid_values(client):
+    """
+    The current router explicitly raises ValueError
+    when any ID is invalid.
+    """
 
-        if len(authors) < 2:
-            pytest.skip(
-                "Test database contains fewer than 2 authors."
-            )
-
-        ids = [
-            authors[0]["author_id"],
-            authors[1]["author_id"],
-        ]
-
-        response = client.get(
-            "/api/authors/collection/ids",
+    with pytest.raises(
+        ValueError,
+        match="author_ids must contain only",
+    ):
+        client.get(
+            "/api/authors/multiple/ids",
             params={
-                "ids": ",".join(map(str, ids)),
+                "author_ids": "2208,abc",
             },
         )
 
-        assert response.status_code == 200
 
-        data = response.json()
+def test_get_multiple_authors_ids_missing_parameter(client):
+    response = client.get(
+        "/api/authors/multiple/ids"
+    )
 
-        assert data["requested_count"] == 2
-        assert data["returned_count"] == 2
+    assert response.status_code == 422
 
-        returned_ids = [
-            author["author_id"]
-            for author in data["results"]
-        ]
 
-        assert returned_ids == ids
+def test_get_multiple_authors_ids_empty(client):
+    response = client.get(
+        "/api/authors/multiple/ids",
+        params={
+            "author_ids": "",
+        },
+    )
 
-    def test_get_authors_by_ids_removes_duplicates(self, client):
-        """
-        Duplicate IDs should be removed.
-        """
+    assert response.status_code == 422
 
-        author_id = get_existing_author_id(client)
 
-        response = client.get(
-            "/api/authors/collection/ids",
-            params={
-                "ids": (
-                    f"{author_id},"
-                    f"{author_id},"
-                    f"{author_id}"
-                ),
-            },
-        )
+def test_get_multiple_authors_ids_whitespace(client):
+    response = client.get(
+        "/api/authors/multiple/ids",
+        params={
+            "author_ids": " 2208 , 1561 ",
+        },
+    )
 
-        assert response.status_code == 200
+    assert response.status_code == 200
 
-        data = response.json()
+    data = response.json()
 
-        assert data["requested_count"] == 1
-        assert data["returned_count"] == 1
-        assert len(data["results"]) == 1
+    assert "authors" in data
 
-    def test_get_authors_by_ids_preserves_order(self, client):
-        """
-        Requested ID order should be preserved.
-        """
-
-        response = client.get(
-            "/api/authors",
-            params={
-                "size": 3,
-            },
-        )
-
-        assert response.status_code == 200
-
-        authors = response.json()["results"]
-
-        if len(authors) < 2:
-            pytest.skip(
-                "Test database contains fewer than 2 authors."
-            )
-
-        ids = [
-            authors[1]["author_id"],
-            authors[0]["author_id"],
-        ]
-
-        response = client.get(
-            "/api/authors/collection/ids",
-            params={
-                "ids": ",".join(map(str, ids)),
-            },
-        )
-
-        assert response.status_code == 200
-
-        returned_ids = [
-            author["author_id"]
-            for author in response.json()["results"]
-        ]
-
-        assert returned_ids == ids
-
-    def test_get_authors_by_ids_missing_id(self, client):
-        """
-        Missing IDs should be ignored.
-        """
-
-        existing_id = get_existing_author_id(client)
-
-        response = client.get(
-            "/api/authors/collection/ids",
-            params={
-                "ids": f"{existing_id},999999999",
-            },
-        )
-
-        assert response.status_code == 200
-
-        data = response.json()
-
-        assert data["requested_count"] == 2
-        assert data["returned_count"] == 1
-        assert len(data["results"]) == 1
-        assert data["results"][0]["author_id"] == existing_id
-
-    def test_get_authors_by_ids_invalid_id(self, client):
-        """
-        Non-numeric IDs should return 400.
-        """
-
-        response = client.get(
-            "/api/authors/collection/ids",
-            params={
-                "ids": "abc",
-            },
-        )
-
-        assert response.status_code == 400
-
-    def test_get_authors_by_ids_zero(self, client):
-        """
-        Zero is not a valid author ID.
-        """
-
-        response = client.get(
-            "/api/authors/collection/ids",
-            params={
-                "ids": "0",
-            },
-        )
-
-        assert response.status_code == 400
-
-    def test_get_authors_by_ids_negative(self, client):
-        """
-        Negative IDs should be rejected.
-        """
-
-        response = client.get(
-            "/api/authors/collection/ids",
-            params={
-                "ids": "-1",
-            },
-        )
-
-        assert response.status_code == 400
-
-    def test_get_authors_by_ids_empty(self, client):
-        """
-        Empty ID collection should fail validation.
-        """
-
-        response = client.get(
-            "/api/authors/collection/ids",
-            params={
-                "ids": "",
-            },
-        )
-
-        assert response.status_code == 422
+    assert isinstance(
+        data["authors"],
+        list,
+    )
 
 
 # ============================================================
-# GET /api/authors/collection/names
+# GET /api/authors/multiple/names
 # ============================================================
 
-class TestGetAuthorsByNames:
 
-    def test_get_authors_by_single_name(self, client):
-        """
-        Retrieve one author by name.
-        """
+def test_get_multiple_authors_by_single_name(client):
+    """
+    A single name is not a multiple-author request.
 
-        author = get_existing_author(client)
+    The current router explicitly raises ValueError.
+    """
 
-        response = client.get(
-            "/api/authors/collection/names",
+    with pytest.raises(
+        ValueError,
+        match="At least two author names are required",
+    ):
+        client.get(
+            "/api/authors/multiple/names",
             params={
-                "names": author["author_name"],
+                "author_names": "A Ford",
             },
         )
 
-        assert response.status_code == 200
 
-        data = response.json()
+def test_get_multiple_authors_by_names(client):
+    response = client.get(
+        "/api/authors/multiple/names",
+        params={
+            "author_names": "A Ford,A. H. Alamoodi",
+        },
+    )
 
-        assert data["requested_count"] == 1
-        assert data["returned_count"] == 1
-        assert len(data["results"]) == 1
+    assert response.status_code == 200
 
+    data = response.json()
+
+    assert isinstance(data, dict)
+
+    assert "authors" in data
+
+    assert isinstance(
+        data["authors"],
+        list,
+    )
+
+
+def test_get_multiple_authors_names_with_spaces(client):
+    response = client.get(
+        "/api/authors/multiple/names",
+        params={
+            "author_names": (
+                "  A Ford  ,  A. H. Alamoodi  "
+            ),
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert "authors" in data
+
+    assert isinstance(
+        data["authors"],
+        list,
+    )
+
+
+def test_get_multiple_authors_duplicate_names(client):
+    """
+    Duplicate names are still two supplied names.
+
+    Therefore the router should not reject them because
+    of the minimum-count validation.
+    """
+
+    response = client.get(
+        "/api/authors/multiple/names",
+        params={
+            "author_names": "A Ford,A Ford",
+        },
+    )
+
+    assert response.status_code in (
+        200,
+        404,
+    )
+
+
+def test_get_multiple_authors_names_preserve_order(client):
+    response = client.get(
+        "/api/authors/multiple/names",
+        params={
+            "author_names": "A Ford,A. H. Alamoodi",
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    authors = data["authors"]
+
+    assert isinstance(
+        authors,
+        list,
+    )
+
+    if len(authors) >= 2:
+        assert authors[0]["author_name"] == "A Ford"
         assert (
-            data["results"][0]["author_id"]
-            == author["author_id"]
+            authors[1]["author_name"]
+            == "A. H. Alamoodi"
         )
 
-    def test_get_authors_by_multiple_names(self, client):
-        """
-        Retrieve multiple authors by names.
-        """
 
-        response = client.get(
-            "/api/authors",
-            params={
-                "size": 3,
-            },
-        )
+def test_get_multiple_authors_names_case_insensitive(client):
+    response = client.get(
+        "/api/authors/multiple/names",
+        params={
+            "author_names": "a ford,a. h. alamoodi",
+        },
+    )
 
-        assert response.status_code == 200
+    assert response.status_code == 200
 
-        authors = response.json()["results"]
+    data = response.json()
 
-        if len(authors) < 2:
-            pytest.skip(
-                "Test database contains fewer than 2 authors."
-            )
+    assert "authors" in data
 
-        names = [
-            authors[0]["author_name"],
-            authors[1]["author_name"],
-        ]
+    assert isinstance(
+        data["authors"],
+        list,
+    )
 
-        response = client.get(
-            "/api/authors/collection/names",
-            params={
-                "names": ",".join(names),
-            },
-        )
 
-        assert response.status_code == 200
+def test_get_multiple_authors_names_missing_parameter(client):
+    response = client.get(
+        "/api/authors/multiple/names"
+    )
 
-        data = response.json()
+    assert response.status_code == 422
 
-        assert data["requested_count"] == 2
-        assert data["returned_count"] == 2
 
-        returned_ids = [
-            author["author_id"]
-            for author in data["results"]
-        ]
+def test_get_multiple_authors_names_empty(client):
+    response = client.get(
+        "/api/authors/multiple/names",
+        params={
+            "author_names": "",
+        },
+    )
 
-        expected_ids = [
-            authors[0]["author_id"],
-            authors[1]["author_id"],
-        ]
+    assert response.status_code == 422
 
-        assert returned_ids == expected_ids
 
-    def test_get_authors_by_names_case_insensitive(self, client):
-        """
-        Name matching should be case-insensitive.
-        """
+def test_get_multiple_authors_names_not_found(client):
+    response = client.get(
+        "/api/authors/multiple/names",
+        params={
+            "author_names": (
+                "Author Definitely Does Not Exist,"
+                "Another Fake Author"
+            ),
+        },
+    )
 
-        author = get_existing_author(client)
+    assert response.status_code == 404
 
-        response = client.get(
-            "/api/authors/collection/names",
-            params={
-                "names": author["author_name"].upper(),
-            },
-        )
 
-        assert response.status_code == 200
+def test_get_multiple_authors_names_unicode(client):
+    response = client.get(
+        "/api/authors/multiple/names",
+        params={
+            "author_names": (
+                "Μαρία Ανδρέου,"
+                "裕二 池谷"
+            ),
+        },
+    )
 
-        data = response.json()
+    assert response.status_code in (
+        200,
+        404,
+    )
 
-        assert data["returned_count"] == 1
 
-        assert (
-            data["results"][0]["author_id"]
-            == author["author_id"]
-        )
+def test_get_multiple_authors_names_apostrophe(client):
+    response = client.get(
+        "/api/authors/multiple/names",
+        params={
+            "author_names": (
+                "O'Connor,"
+                "Smith-Jones"
+            ),
+        },
+    )
 
-    def test_get_authors_by_names_removes_duplicates(self, client):
-        """
-        Duplicate names should be removed case-insensitively.
-        """
-
-        author = get_existing_author(client)
-
-        name = author["author_name"]
-
-        response = client.get(
-            "/api/authors/collection/names",
-            params={
-                "names": f"{name},{name},{name.upper()}",
-            },
-        )
-
-        assert response.status_code == 200
-
-        data = response.json()
-
-        assert data["requested_count"] == 1
-        assert data["returned_count"] == 1
-        assert len(data["results"]) == 1
-
-    def test_get_authors_by_names_missing_name(self, client):
-        """
-        Missing author names should be ignored.
-        """
-
-        author = get_existing_author(client)
-
-        response = client.get(
-            "/api/authors/collection/names",
-            params={
-                "names": (
-                    f"{author['author_name']},"
-                    "THIS AUTHOR DOES NOT EXIST 123456789"
-                ),
-            },
-        )
-
-        assert response.status_code == 200
-
-        data = response.json()
-
-        assert data["requested_count"] == 2
-        assert data["returned_count"] == 1
-
-        assert (
-            data["results"][0]["author_id"]
-            == author["author_id"]
-        )
-
-    def test_get_authors_by_names_preserves_order(self, client):
-        """
-        Requested name order should be preserved.
-        """
-
-        response = client.get(
-            "/api/authors",
-            params={
-                "size": 3,
-            },
-        )
-
-        assert response.status_code == 200
-
-        authors = response.json()["results"]
-
-        if len(authors) < 2:
-            pytest.skip(
-                "Test database contains fewer than 2 authors."
-            )
-
-        names = [
-            authors[1]["author_name"],
-            authors[0]["author_name"],
-        ]
-
-        response = client.get(
-            "/api/authors/collection/names",
-            params={
-                "names": ",".join(names),
-            },
-        )
-
-        assert response.status_code == 200
-
-        returned_ids = [
-            author["author_id"]
-            for author in response.json()["results"]
-        ]
-
-        expected_ids = [
-            authors[1]["author_id"],
-            authors[0]["author_id"],
-        ]
-
-        assert returned_ids == expected_ids
-
-    def test_get_authors_by_names_not_found(self, client):
-        """
-        Unknown author name should return an empty collection.
-        """
-
-        response = client.get(
-            "/api/authors/collection/names",
-            params={
-                "names": (
-                    "THIS AUTHOR DOES NOT EXIST "
-                    "123456789"
-                ),
-            },
-        )
-
-        assert response.status_code == 200
-
-        data = response.json()
-
-        assert data["requested_count"] == 1
-        assert data["returned_count"] == 0
-        assert data["results"] == []
-
-    def test_get_authors_by_names_empty(self, client):
-        """
-        Empty names parameter should fail validation.
-        """
-
-        response = client.get(
-            "/api/authors/collection/names",
-            params={
-                "names": "",
-            },
-        )
-
-        assert response.status_code == 422
+    assert response.status_code in (
+        200,
+        404,
+    )

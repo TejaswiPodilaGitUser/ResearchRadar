@@ -107,37 +107,6 @@ def get_authors(
 
 
 # ============================================================
-# GET /authors/{author_id}
-# ============================================================
-
-@router.get(
-    "/{author_id}",
-    response_model=AuthorDetailResponse,
-    summary="Get Author by id",
-)
-def get_author(
-    db: DbSession,
-    author_id: int,
-):
-    """
-    Get author details and associated papers.
-    """
-
-    author = get_author_by_id(
-        db=db,
-        author_id=author_id,
-    )
-
-    if author is None:
-        raise ResourceNotFoundException(
-            resource="Author",
-            resource_id=author_id,
-        )
-
-    return author
-
-
-# ============================================================
 # GET /authors/name
 # ============================================================
 
@@ -305,12 +274,69 @@ def get_multiple_authors_by_names_endpoint(
         if name.strip()
     ]
 
+    # --------------------------------------------------------
+    # At least two names are required
+    # --------------------------------------------------------
+
     if len(names) < 2:
         raise ValueError(
             "At least two author names are required."
+        )
+
+    # --------------------------------------------------------
+    # Duplicate names
+    #
+    # The multiple-author service requires multiple distinct
+    # names. If the request contains only the same name twice,
+    # return 404 instead of allowing the service ValueError
+    # to escape.
+    # --------------------------------------------------------
+
+    unique_names = list(
+        dict.fromkeys(
+            name.casefold()
+            for name in names
+        )
+    )
+
+    if len(unique_names) < 2:
+        raise ResourceNotFoundException(
+            resource="Authors",
+            resource_id=names[0],
         )
 
     return get_multiple_authors_by_names(
         db=db,
         author_names=names,
     )
+
+
+# ============================================================
+# GET /authors/{author_id}
+# ============================================================
+
+@router.get(
+    "/{author_id}",
+    response_model=AuthorDetailResponse,
+    summary="Get Author by id",
+)
+def get_author(
+    db: DbSession,
+    author_id: int,
+):
+    """
+    Get author details and associated papers.
+    """
+
+    author = get_author_by_id(
+        db=db,
+        author_id=author_id,
+    )
+
+    if author is None:
+        raise ResourceNotFoundException(
+            resource="Author",
+            resource_id=author_id,
+        )
+
+    return author
