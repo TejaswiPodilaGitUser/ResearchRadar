@@ -159,57 +159,59 @@ def get_or_create_author(
         db: Session,
         author_data: dict
 ):
+    """
+    Get or create an author using the fields that exist
+    in the current Author model.
 
+    Author table:
+        id
+        name
+        orcid
+    """
 
-    openalex_id = author_data.get(
-        "id"
-    )
+    name = author_data.get("display_name")
+    orcid = author_data.get("orcid")
 
-
-    if not openalex_id:
-
+    if not name:
         return None
 
-
-
-    author = (
-
-        db.query(Author)
-
-        .filter(
-            Author.openalex_id == openalex_id
+    # Prefer ORCID when available because it is a stable
+    # identifier for an author.
+    if orcid:
+        author = (
+            db.query(Author)
+            .filter(
+                Author.orcid == orcid
+            )
+            .first()
         )
 
+        if author:
+            return author
+
+    # Fallback to author name.
+    author = (
+        db.query(Author)
+        .filter(
+            Author.name == name
+        )
         .first()
     )
 
-
-
     if author:
-
         return author
 
-
-
+    # Create new author using ONLY fields
+    # that exist in the Author model.
     author = Author(
-
-        openalex_id=openalex_id,
-
-        name=author_data.get(
-            "display_name"
-        )
+        name=name,
+        orcid=orcid
     )
 
-
     db.add(author)
-
     db.flush()
 
-
     return author
-
-
-
 # =====================================================
 # Topic
 # =====================================================
