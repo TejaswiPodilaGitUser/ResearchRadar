@@ -1,3 +1,27 @@
+
+
+https://github.com/user-attachments/assets/e9ca082f-23d1-4883-939d-308d6dd193d7
+
+
+
+
+
+<img width="1552" height="862" alt="image" src="https://github.com/user-attachments/assets/423da1c5-9ca1-4df7-89e0-78032be683b3" />
+
+<img width="1538" height="838" alt="image" src="https://github.com/user-attachments/assets/3bd084b0-4da4-45d4-8c50-3d231e2984f0" />
+
+
+
+<img width="1420" height="860" alt="image" src="https://github.com/user-attachments/assets/3eba6c47-b94d-42de-8fed-7ed5126d4eb1" />
+
+<img width="1371" height="814" alt="image" src="https://github.com/user-attachments/assets/2f7bd79e-d910-406f-afae-686932f4e893" />
+
+<img width="1397" height="727" alt="image" src="https://github.com/user-attachments/assets/f416b118-4751-4250-aedc-bc6c861f796f" />
+
+<img width="1499" height="786" alt="image" src="https://github.com/user-attachments/assets/8628168c-76bb-45fb-9dfc-7b68088a4498" />
+
+
+
 # Research Radar
 
 Research Radar is a full-stack research discovery platform for searching, filtering, exploring, and finding similar research papers.
