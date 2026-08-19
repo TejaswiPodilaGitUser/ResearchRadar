@@ -101,6 +101,7 @@ OpenAlex was selected because:
 - Axios
 - CSS
 
+
 ## Infrastructure
 
 - Docker
@@ -143,7 +144,7 @@ OpenAlex was selected because:
 
 ```
 
-4. Data Flow
+# 4. Data Flow
 ```
 OpenAlex API
      │
@@ -164,7 +165,7 @@ FastAPI REST API
      ▼
 React Frontend
 ```
-5. Project Structure
+# 5. Project Structure
 ```
 ResearchRadar/
 │
@@ -214,7 +215,7 @@ ResearchRadar/
 ├── docker-compose.yml
 └── README.md
 ```
-6. Database
+# 6. Database
 
 The main database tables are:
 ```
@@ -235,7 +236,7 @@ Database schema changes are managed using Alembic.
 
 No application tables are manually created.
 
-7. AI Feature
+# 7. AI Feature
 
 The selected AI feature is:
 
@@ -273,7 +274,7 @@ Similar Papers
 ```
 This approach was selected because the assignment requires one AI feature and the semantic similarity feature provides useful research discovery functionality without requiring a paid external LLM API.
 
-8. Backend APIs
+# 8. Backend APIs
 ```
 Health
 GET /health
@@ -307,7 +308,7 @@ Metrics
 GET /metrics
 GET /metrics/performance
 ```
-9. Swagger API Documentation
+# 9. Swagger API Documentation
 
 After starting the backend:
 ```
@@ -317,7 +318,7 @@ OpenAPI specification:
 ```
 http://localhost:8000/openapi.json
 ```
-10. Docker - Recommended Way to Run
+# 10. Docker - Recommended Way to Run
 
 Docker Compose is the recommended way to run the complete application.
 
@@ -333,8 +334,8 @@ PostgreSQL + pgvector
         │
         ▼
       React
-      ```
-11. Prerequisites
+```
+# 11. Prerequisites
 
 Install:
 
@@ -348,13 +349,13 @@ Verify:
 docker --version
 docker compose version
 ```
-12. Clone Repository
+# 12. Clone Repository
 ```
 git clone <repository-url>
 
 cd ResearchRadar
 ```
-13. Start Application
+# 13. Start Application
 
 Recommended command:
 ```
@@ -374,7 +375,7 @@ research-radar-postgres
 research-radar-backend
 research-radar-frontend
 ```
-14. Application URLs
+# 14. Application URLs
 
 Frontend:
 ```
@@ -392,7 +393,7 @@ Health:
 ```
 http://localhost:8000/health
 ```
-15. Docker Startup Flow
+# 15. Docker Startup Flow
 
 The backend automatically executes:
 ```
@@ -427,7 +428,7 @@ Therefore, normally only this command is required:
 ```
 docker compose up --build
 ```
-16. Load Research Data
+# 16. Load Research Data
 
 After the containers are running:
 
@@ -445,7 +446,7 @@ Stores data in PostgreSQL
 
 The ingestion process is designed to be re-runnable and idempotent.
 
-17. Verify Database
+# 17. Verify Database
 
 Check tables:
 ```
@@ -467,7 +468,7 @@ Check embeddings:
 ```
 docker compose exec postgres psql -U postgres -d research_radar -c "SELECT COUNT(*) FROM papers WHERE embedding IS NOT NULL;"
 ```
-18. Useful Docker Commands
+# 18. Useful Docker Commands
 ```
 Start
 docker compose up
@@ -494,7 +495,7 @@ docker compose restart backend
 Restart Everything
 docker compose restart
 ```
-19. Clean Docker Reset
+# 19. Clean Docker Reset
 
 If the database or containers become inconsistent:
 ```
@@ -516,7 +517,7 @@ deletes the PostgreSQL Docker volume and therefore deletes the local database da
 
 Use this only when a clean database is required.
 
-20. Database Migration Commands
+# 20. Database Migration Commands
 
 Check migration status:
 ```
@@ -532,7 +533,7 @@ docker compose exec backend alembic upgrade head
 ```
 Alembic migrations are automatically executed during normal Docker startup.
 
-21. Local Development Without Docker
+# 21. Local Development Without Docker
 
 Docker is recommended, but the application can also be run locally.
 
@@ -572,7 +573,7 @@ Swagger:
 ```
 http://localhost:8000/docs
 ```
-22. Local Data Ingestion
+# 22. Local Data Ingestion
 
 With the backend environment activated:
 ```
@@ -586,7 +587,7 @@ Then:
 ```
 SELECT COUNT(*) FROM papers;
 ```
-23. Frontend Local Development
+# 23. Frontend Local Development
 ```
 cd frontend
 ```
@@ -606,7 +607,7 @@ Frontend:
 ```
 http://localhost:5173
 ```
-24. Frontend Docker Configuration
+# 24. Frontend Docker Configuration
 
 The frontend uses Vite environment variables during the Docker build.
 
@@ -629,7 +630,7 @@ Then:
 ```
 docker compose up -d
 ```
-25. Troubleshooting
+# 25. Troubleshooting
 Frontend Error
 VITE_API_BASE_URL is not configured
 
@@ -646,7 +647,7 @@ Start:
 ```
 docker compose up -d
 ```
-26. Backend Cannot Connect to PostgreSQL
+# 26. Backend Cannot Connect to PostgreSQL
 
 Check:
 ```
@@ -672,7 +673,7 @@ Therefore the backend database URL should be:
 ```
 postgresql://postgres:postgres@postgres:5432/research_radar
 ```
-27. PostgreSQL Vector Error
+# 27. PostgreSQL Vector Error
 
 If you see:
 
@@ -690,7 +691,7 @@ Then:
 ```
 docker compose exec backend alembic upgrade head
 ```
-28. Alembic Migration Error
+# 28. Alembic Migration Error
 
 Check:
 ```
@@ -712,7 +713,7 @@ Then:
 ```
 docker compose up --build
 ```
-29. Empty Database
+# 29. Empty Database
 
 If tables exist but contain no data:
 ```
@@ -726,7 +727,7 @@ Then verify:
 ```
 docker compose exec postgres psql -U postgres -d research_radar -c "SELECT COUNT(*) FROM papers;"
 ```
-30. Ingestion Failure
+# 30. Ingestion Failure
 
 View backend logs:
 ```
@@ -744,7 +745,7 @@ Expected:
 ```
 200
 ```
-31. Frontend Cannot Reach Backend
+# 31. Frontend Cannot Reach Backend
 
 Verify backend:
 ```
@@ -767,7 +768,7 @@ http://backend:8000
 ```
 backend is only a Docker-internal hostname.
 
-32. Port Already in Use
+# 32. Port Already in Use
 
 Check:
 ```
@@ -777,7 +778,7 @@ lsof -i :5432
 ```
 Stop the conflicting process or change the Docker port mapping.
 
-33. Testing
+# 33. Testing
 
 Run backend tests:
 
@@ -804,7 +805,7 @@ See:
 ```
 documentation/TESTING.md
 ```
-34. API Documentation
+# 34. API Documentation
 
 Detailed API documentation:
 ```
@@ -839,7 +840,7 @@ GET /recommendations
 
 GET /metrics
 GET /metrics/performance
-35. Observability
+# 35. Observability
 ```
 The backend tracks:
 
@@ -863,7 +864,7 @@ Prometheus
 Grafana
 OpenTelemetry
 CloudWatch
-36. Error Handling
+# 36. Error Handling
 
 The application handles:
 
@@ -881,7 +882,7 @@ Loading states
 Empty states
 Error states
 Retry/navigation options
-37. Configuration
+# 37. Configuration
 
 Configuration is environment-based.
 
@@ -901,13 +902,11 @@ EMBEDDING_DIMENSION=384
 ```
 Secrets must not be committed to Git.
 
-38. Production Deployment
+# 38. Production Deployment
 
 Docker Compose is intended for local development and evaluation.
 
 A production deployment should use:
-```
-
 ```
 Internet
    │
@@ -925,7 +924,7 @@ Nginx            FastAPI
 ```
 
 Recommended production components:
-
+```
 HTTPS
 Load balancer
 Managed PostgreSQL
@@ -937,7 +936,8 @@ Centralized logging
 Monitoring
 Health checks
 Autoscaling
-39. Production Security
+```
+# 39. Production Security
 
 Production should use:
 
@@ -961,7 +961,7 @@ ports:
 ```
 but should generally be removed or restricted in production.
 
-40. Production Configuration Principles
+# 40. Production Configuration Principles
 
 Do not hard-code:
 
@@ -978,7 +978,7 @@ Cloud secret managers
 
 The production database should be managed separately from the application containers.
 
-41. Design Decisions
+# 41. Design Decisions
 OpenAlex
 
 OpenAlex provides free scholarly metadata without requiring an API key for this assignment.
@@ -1016,7 +1016,7 @@ React + TypeScript
 
 React provides a flexible UI architecture and TypeScript improves frontend maintainability and type safety.
 
-42. Trade-offs
+# 42. Trade-offs
 
 The project is time-boxed and intentionally avoids unnecessary infrastructure.
 
@@ -1061,7 +1061,7 @@ Trade-off:
 
 A very large corpus may require dedicated vector-search infrastructure.
 
-43. Current Implementation Status
+# 43. Current Implementation Status
 ```
 Backend
  FastAPI
@@ -1112,7 +1112,7 @@ Infrastructure
  Nginx
  Automatic migrations
  ```
-44. Known Limitations
+# 44. Known Limitations
 
 This is a time-boxed engineering assignment and not a complete production SaaS platform.
 
@@ -1130,7 +1130,7 @@ No cloud deployment by default
 
 These are natural next steps for a production deployment.
 
-45. Future Improvements
+# 45. Future Improvements
 Platform
 Kubernetes deployment
 CI/CD
@@ -1157,7 +1157,7 @@ LLM-powered summaries
 Explainable recommendations
 Research trend detection
 Topic clustering
-46. Final Clean Start
+# 46. Final Clean Start
 
 If you need to completely recreate the local environment:
 ```
@@ -1187,7 +1187,7 @@ Open:
 ```
 http://localhost:5173
 ```
-47. Recommended Reviewer Flow
+# 47. Recommended Reviewer Flow
 
 A reviewer can run the complete application using:
 ```
@@ -1217,7 +1217,7 @@ API documentation
 Database
 Error handling
 API metrics
-48. Documentation
+# 48. Documentation
 
 Additional project documentation is available under:
 
@@ -1233,7 +1233,7 @@ DATABASE.md
 TESTING.md
 API.md
 AI_SEARCH.md
-49. Final Summary
+# 49. Final Summary
 
 Research Radar demonstrates an end-to-end full-stack research discovery platform:
 ```
@@ -1293,6 +1293,6 @@ If the database is empty:
 ```
 docker compose exec backend python -m app.ingestion.openalex_loader
 ```
-License
+# 50. License
 
-This project was developed as a Full Stack / Platform Engineer assignment and is intended for evaluation and development purposes.                 
+This project was developed as an assignment and is intended for evaluation and development purposes.                 
