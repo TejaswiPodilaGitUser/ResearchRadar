@@ -768,7 +768,7 @@ http://backend:8000
 ```
 backend is only a Docker-internal hostname.
 
-# 32. Port Already in Use
+##  Port Already in Use
 
 Check:
 ```
@@ -778,7 +778,7 @@ lsof -i :5432
 ```
 Stop the conflicting process or change the Docker port mapping.
 
-# 33. Testing
+# 32. Testing
 
 Run backend tests:
 
@@ -804,6 +804,26 @@ Metrics
 See:
 ```
 documentation/TESTING.md
+```
+
+# 33. Testing individual files
+From your backend/ directory, you can run individual pytest files like this:
+
+1. Run one test file
+```
+pytest -v tests/test_papers.py
+```
+
+You can run:
+```
+pytest -v tests/test_papers.py
+pytest -v tests/test_authors.py
+pytest -v tests/test_topics.py
+pytest -v tests/test_recommendations.py
+```
+Recommended while debugging:
+```
+pytest -v -s tests/test_papers.py
 ```
 # 34. API Documentation
 
